@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    --background: 210 20% 94%;
+    --foreground: 215 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --primary: 171 76% 25%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 20% 90%;
+    --secondary-foreground: 215 25% 15%;
+    --muted: 210 20% 90%;
+    --muted-foreground: 215 13% 45%;
+    --accent: 37 80% 42%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 20% 82%;
+    --input: 210 20% 82%;
+    --ring: 171 76% 25%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 215 28% 12%;
+    --foreground: 210 20% 94%;
+    --card: 215 28% 15%;
+    --card-foreground: 210 20% 94%;
+    --primary: 171 76% 45%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 215 28% 20%;
+    --secondary-foreground: 210 20% 94%;
+    --muted: 215 28% 20%;
+    --muted-foreground: 215 13% 60%;
+    --accent: 37 80% 55%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 28% 25%;
+    --input: 215 28% 25%;
+    --ring: 171 76% 45%;
+  }
+}
+
+@layer base {
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}

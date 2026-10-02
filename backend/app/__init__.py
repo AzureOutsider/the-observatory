@@ -1,0 +1,1 @@
+"""Finance dashboard backend package."""

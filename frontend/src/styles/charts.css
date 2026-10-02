@@ -1,0 +1,200 @@
+/* Charts-only Observatory palette. Financial red/green remain semantic. */
+html[data-theme="dark"] .chartsWorkspace {
+  --accent: var(--obs-brass-bright);
+  --accent-deep: var(--obs-brass);
+  --ink: var(--obs-moon);
+  --muted: var(--obs-muted);
+  --line: var(--obs-blue-line);
+  --paper: var(--obs-night-mid);
+  --paper-bright: var(--obs-blue);
+  --charts-warning: #e4bb7c;
+  --charts-error: #f29b9f;
+}
+
+html[data-theme="dark"] .chartsWorkspace .chartsHeader {
+  border-color: var(--obs-blue-line);
+}
+
+html[data-theme="dark"] .chartsWorkspace .pageKicker,
+html[data-theme="dark"] .chartsWorkspace .watchlistToolbarTitle > span {
+  color: var(--obs-brass-bright);
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip {
+  border: 1px solid var(--obs-blue-line);
+  border-left: 2px solid var(--obs-brass);
+  background: rgba(7, 14, 29, .32);
+  color: var(--obs-muted);
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip strong {
+  color: var(--obs-moon);
+  font-size: 14px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusIcon {
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip.partial {
+  border-left-color: var(--charts-warning);
+  background: rgba(87, 61, 27, .22);
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip.failed {
+  border-left-color: var(--charts-error);
+  background: rgba(88, 38, 48, .22);
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip.partial .refreshStatusIcon,
+html[data-theme="dark"] .chartsWorkspace .fallbackFlag {
+  color: var(--charts-warning);
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshStatusStrip.failed .refreshStatusIcon,
+html[data-theme="dark"] .chartsWorkspace .fundQuoteState.unavailable strong {
+  color: var(--charts-error);
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthStrip,
+html[data-theme="dark"] .chartsWorkspace .tagFilterBar,
+html[data-theme="dark"] .chartsWorkspace .watchlistToolbar {
+  border-color: var(--obs-blue-line);
+  background: transparent;
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip {
+  border-color: var(--obs-blue-line);
+  background: transparent;
+  padding: 5px 8px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip small {
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip.healthy i {
+  background: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip.no_data i,
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip.idle i {
+  background: var(--obs-muted);
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip.degraded i {
+  background: var(--charts-warning);
+}
+
+html[data-theme="dark"] .chartsWorkspace .sourceHealthChip.unavailable i {
+  background: var(--charts-error);
+}
+
+html[data-theme="dark"] .chartsWorkspace .tagFilterTitle,
+html[data-theme="dark"] .chartsWorkspace .tagFilterHint,
+html[data-theme="dark"] .chartsWorkspace .trackingSummary,
+html[data-theme="dark"] .chartsWorkspace .watchlistDescription {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+html[data-theme="dark"] .chartsWorkspace .tagFilterOptions button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--obs-muted);
+  min-height: 36px;
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .tagFilterOptions button.active {
+  border-bottom-color: var(--obs-brass-bright);
+  background: rgba(196, 154, 84, .08);
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .chartsWorkspace .tagFilterOptions small {
+  font-size: 12px;
+  opacity: 1;
+}
+
+/* Unboxed labels: reserve chromatic emphasis for the actual change value. */
+html[data-theme="dark"] .chartsWorkspace .fundTrendGrid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendHeader span {
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendHeader em,
+html[data-theme="dark"] .chartsWorkspace .fundCategoryBadge,
+html[data-theme="dark"] .chartsWorkspace .fallbackFlag {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendHeader em {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundCategoryBadge,
+html[data-theme="dark"] .chartsWorkspace .fundQuoteState.official_nav strong {
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendMeta {
+  gap: 6px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendTags span {
+  border-color: var(--obs-blue-line);
+  color: var(--obs-muted);
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendCard {
+  border-left-width: 1px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .fundTrendCard:hover {
+  border-color: rgba(225, 189, 114, .42);
+}
+
+html[data-theme="dark"] .chartsWorkspace .removeWatchButton {
+  color: var(--obs-muted);
+}
+
+html[data-theme="dark"] .chartsWorkspace .refreshRetryButton {
+  border-color: var(--obs-blue-line);
+  background: transparent;
+  color: var(--obs-brass-bright);
+  min-height: 36px;
+}
+
+html[data-theme="dark"] .chartsWorkspace .iconButton:not(:disabled):hover,
+html[data-theme="dark"] .chartsWorkspace .removeWatchButton:hover,
+html[data-theme="dark"] .chartsWorkspace .refreshRetryButton:hover,
+html[data-theme="dark"] .chartsWorkspace .tagFilterOptions button:hover {
+  border-color: var(--obs-brass);
+  background: rgba(196, 154, 84, .1);
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .chartsWorkspace .trackingEmpty {
+  background: rgba(7, 14, 29, .32);
+}
+
+@media (max-width: 560px) {
+  html[data-theme="dark"] .chartsWorkspace { padding: 18px 14px; }
+  html[data-theme="dark"] .chartsWorkspace .chartsHeader { align-items: flex-start; flex-direction: column; }
+  html[data-theme="dark"] .chartsWorkspace .sourceHealthNote { margin-left: 0; }
+}

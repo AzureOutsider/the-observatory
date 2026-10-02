@@ -1,0 +1,118 @@
+/* A readable ledger: larger type without changing position or valuation logic. */
+html[data-theme="dark"] .holdingsView,
+html[data-theme="dark"] .holdingEditor {
+  --accent: var(--obs-brass-bright);
+  --accent-deep: var(--obs-brass);
+  --ink: var(--obs-moon);
+  --muted: var(--obs-muted);
+  --line: var(--obs-blue-line);
+  --paper: var(--obs-night-mid);
+  --paper-bright: var(--obs-blue);
+  color: var(--obs-moon);
+  font-size: 16px;
+}
+html[data-theme="dark"] .holdingsView { padding: 30px; }
+html[data-theme="dark"] .holdingsView .kicker,
+html[data-theme="dark"] .holdingEditor .kicker { color: var(--obs-brass-bright); font-size: 14px; }
+html[data-theme="dark"] .holdingsMasthead h2 { font: 400 clamp(32px, 3vw, 42px)/1.4 "Libre Baskerville", Georgia, serif; }
+html[data-theme="dark"] .holdingsMasthead p { font-size: 17px; line-height: 1.8; }
+html[data-theme="dark"] .holdingsStamp { border-color: rgba(225, 189, 114, .36); min-width: 82px; min-height: 82px; }
+html[data-theme="dark"] .holdingsStamp span { font-size: 13px; }
+html[data-theme="dark"] .holdingsStamp strong { font-size: 30px; }
+
+html[data-theme="dark"] .holdingsMetrics { margin-top: 22px; border: 1px solid var(--obs-blue-line); background: rgba(7, 14, 29, .3); }
+html[data-theme="dark"] .holdingsMetric { padding: 22px 18px; }
+html[data-theme="dark"] .holdingsMetric span { font-size: 16px; }
+html[data-theme="dark"] .holdingsMetric strong {
+  font: 600 clamp(26px, 2.4vw, 34px)/1.5 "DM Sans", "Noto Sans SC", sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+html[data-theme="dark"] .holdingsMetric .upText,
+html[data-theme="dark"] .holdingsView td.upText { color: var(--green); }
+html[data-theme="dark"] .holdingsMetric .downText,
+html[data-theme="dark"] .holdingsView td.downText { color: var(--red); }
+html[data-theme="dark"] .holdingsView .flatText { color: var(--obs-muted); }
+html[data-theme="dark"] .holdingsRule { margin: 28px 0 18px; font-size: 14px; color: var(--obs-brass-bright); }
+
+html[data-theme="dark"] .holdingsTableWrap { scrollbar-color: #63748c var(--obs-night-mid); }
+html[data-theme="dark"] .holdingsTable { min-width: 1180px; }
+html[data-theme="dark"] .virtualTableWrap .holdingsTable { display: block; }
+html[data-theme="dark"] .virtualTableWrap .holdingsTable thead { display: table; table-layout: fixed; width: 100%; }
+html[data-theme="dark"] .holdingsTable :is(th, td) { padding: 20px 10px; border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .holdingsTable th { color: var(--obs-muted); font-size: 15px; background: var(--obs-night-mid); }
+html[data-theme="dark"] .holdingsTable td { font-size: 17px; }
+/* Percentages also apply to measured virtual rows, which are separate tables. */
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(1) { width: 27%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(2) { width: 6%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(3) { width: 11%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(4) { width: 13%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(5) { width: 11%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(6) { width: 13%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(7) { width: 12%; }
+html[data-theme="dark"] .holdingsTable :is(th, td):nth-child(8) { width: 7%; }
+html[data-theme="dark"] .holdingsTable tbody tr:hover { background: rgba(185, 211, 231, .04); }
+html[data-theme="dark"] .holdingsView .holdingIdentity { gap: 7px; }
+html[data-theme="dark"] .holdingsView .holdingIdentity strong { font: 400 19px/1.6 "Libre Baskerville", Georgia, serif; white-space: normal; overflow-wrap: anywhere; }
+html[data-theme="dark"] .holdingsView .holdingIdentity small { font-size: 15px; line-height: 1.6; }
+html[data-theme="dark"] .holdingsView .holdingAudit.manual { color: var(--obs-brass-bright); }
+html[data-theme="dark"] .holdingsView .assetTypeBadge { border: 0; background: transparent; color: var(--obs-brass-bright); font-size: 15px; padding: 0; }
+html[data-theme="dark"] .holdingsView .weightCell { grid-template-columns: 1fr; gap: 10px; font-size: 16px; }
+html[data-theme="dark"] .holdingsView .weightCell i { max-width: 88px; height: 4px; background: rgba(185, 211, 231, .15); }
+html[data-theme="dark"] .holdingsView .weightCell b { background: var(--obs-brass); }
+html[data-theme="dark"] .holdingsView .holdingProfit { display: table-cell; }
+html[data-theme="dark"] .holdingsView .holdingProfit strong { display: block; font-size: 18px; }
+html[data-theme="dark"] .holdingsView .holdingProfit small { display: block; margin-top: 6px; font-size: 15px; }
+html[data-theme="dark"] .holdingsView .compactAction { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 8px; font-size: 15px; white-space: nowrap; }
+html[data-theme="dark"] .holdingsFooter { flex-wrap: wrap; font-size: 15px; line-height: 1.8; margin-top: 22px; }
+html[data-theme="dark"] .holdingsEmpty { border-color: var(--obs-blue-line); font-size: 16px; line-height: 1.8; }
+html[data-theme="dark"] .holdingsView .notice { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 16px; }
+html[data-theme="dark"] .holdingsView .refreshRetryButton { color: var(--obs-brass-bright); font-size: 15px; }
+
+/* The shared correction editor is styled consistently in holdings and operations. */
+html[data-theme="dark"] .holdingEditorBackdrop { background: rgba(3, 8, 18, .76); backdrop-filter: blur(8px); }
+html[data-theme="dark"] .holdingEditor { width: min(660px, 100%); min-width: 0; max-width: 100%; max-height: calc(100dvh - 44px); border-color: var(--obs-blue-line); background: linear-gradient(145deg, #1b2e48, var(--obs-night-mid)); padding: 28px; scrollbar-color: #63748c var(--obs-night-mid); }
+html[data-theme="dark"] .holdingEditorHeader > div { min-width: 0; }
+html[data-theme="dark"] .holdingEditorHeader h2 { font: 400 30px/1.5 "Libre Baskerville", Georgia, serif; }
+html[data-theme="dark"] .holdingEditorHeader p { font-size: 16px; line-height: 1.7; white-space: normal; overflow-wrap: anywhere; }
+html[data-theme="dark"] .holdingEditor .modalCloseButton { flex-shrink: 0; width: 42px; height: 42px; }
+html[data-theme="dark"] .holdingEditorNotice { background: rgba(196, 154, 84, .08); color: var(--obs-muted); font-size: 16px; line-height: 1.8; padding: 12px 14px; }
+html[data-theme="dark"] .holdingEditorGrid { gap: 20px; }
+html[data-theme="dark"] .holdingEditorGrid label span { font-size: 16px; line-height: 1.5; }
+html[data-theme="dark"] .holdingEditor :is(input, textarea) { min-width: 0; min-height: 46px; font-size: 17px; line-height: 1.6; }
+html[data-theme="dark"] .holdingEditor :is(input, textarea)::placeholder { color: var(--obs-muted); opacity: .9; }
+html[data-theme="dark"] .holdingEditor textarea { min-height: 100px; }
+html[data-theme="dark"] .holdingEditorActions button { min-height: 46px; font-size: 16px; }
+html[data-theme="dark"] .holdingEditorError { font-size: 16px; }
+html[data-theme="dark"] .holdingEditor .iconButton:hover:not(:disabled),
+html[data-theme="dark"] .holdingEditor .modalCloseButton:hover:not(:disabled),
+html[data-theme="dark"] .holdingsView .iconButton:hover:not(:disabled) { border-color: var(--obs-brass); background: rgba(196, 154, 84, .1); color: var(--obs-brass-bright); }
+html[data-theme="dark"] .holdingEditor .primaryButton:hover:not(:disabled) { background: var(--obs-brass-bright); }
+html[data-theme="dark"] [data-sonner-toast].holdingToast { border-color: rgba(225, 189, 114, .4); background: var(--obs-night-mid); color: var(--obs-moon); font-size: 16px; }
+html[data-theme="dark"] [data-sonner-toast].holdingToast [data-icon] { color: var(--obs-brass-bright); }
+html[data-theme="dark"] [data-sonner-toast].holdingToast[data-type="error"] { border-color: var(--red); }
+html[data-theme="dark"] [data-sonner-toast].holdingToast[data-type="error"] [data-icon] { color: var(--red); }
+
+@media (max-width: 1100px) {
+  html[data-theme="dark"] .holdingsMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-theme="dark"] .holdingsMetric:nth-child(2) { border-right: 0; }
+  html[data-theme="dark"] .holdingsMetric:nth-child(n + 3) { border-top: 1px solid var(--obs-blue-line); }
+}
+@media (max-width: 560px) {
+  html[data-theme="dark"] .holdingsView { padding: 20px 14px; }
+  html[data-theme="dark"] .holdingsMasthead h2 { font-size: 30px; }
+  html[data-theme="dark"] .holdingsMasthead p { font-size: 16px; }
+  html[data-theme="dark"] .holdingsMetrics { grid-template-columns: 1fr; }
+  html[data-theme="dark"] .holdingsMetric { padding: 18px 12px; border-right: 0; }
+  html[data-theme="dark"] .holdingsMetric + .holdingsMetric { border-top: 1px solid var(--obs-blue-line); }
+  html[data-theme="dark"] .holdingsMetric strong { font-size: 26px; }
+  html[data-theme="dark"] .holdingEditor { max-height: calc(100dvh - 20px); padding: 22px 18px; }
+  html[data-theme="dark"] .holdingEditorBackdrop { padding: 10px; }
+  html[data-theme="dark"] .holdingEditorGrid { grid-template-columns: 1fr; }
+  html[data-theme="dark"] .holdingEditorHeader h2 { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="dark"] .holdingsView,
+  html[data-theme="dark"] .holdingEditorBackdrop { animation: none; }
+}

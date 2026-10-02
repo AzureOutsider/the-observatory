@@ -1,0 +1,108 @@
+/* The activity register shares the Observatory's navy, moonlight and brass. */
+html[data-theme="dark"] .transactionsView,
+html[data-theme="dark"] .transactionDialogScope {
+  --accent: var(--obs-brass-bright);
+  --accent-deep: var(--obs-brass);
+  --ink: var(--obs-moon);
+  --muted: var(--obs-muted);
+  --line: var(--obs-blue-line);
+  --paper: var(--obs-night-mid);
+  --paper-bright: var(--obs-blue);
+  color: var(--obs-moon);
+  font-size: 16px;
+}
+html[data-theme="dark"] .transactionsView { gap: 28px; }
+html[data-theme="dark"] .transactionsIntro { padding: 8px 0 24px; border: 0; border-bottom: 1px solid var(--obs-blue-line); background: transparent; box-shadow: none; }
+html[data-theme="dark"] .transactionsIntro .kicker { color: var(--obs-brass-bright); font-size: 14px; }
+html[data-theme="dark"] .transactionsIntro h2 { font: 400 clamp(30px, 3vw, 42px)/1.4 "Libre Baskerville", Georgia, serif; }
+html[data-theme="dark"] .transactionsIntro p { font-size: 17px; line-height: 1.8; }
+html[data-theme="dark"] .transactionsStamp { min-height: 44px; border-color: var(--obs-blue-line); color: var(--obs-brass-bright); font-size: 15px; white-space: nowrap; }
+html[data-theme="dark"] .transactionsGrid { gap: 24px; }
+html[data-theme="dark"] .transactionsView .panel {
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid var(--obs-blue-line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(27, 46, 72, .76), rgba(12, 22, 43, .7));
+  backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(244, 242, 220, .04), 0 16px 40px rgba(3, 8, 18, .16);
+}
+html[data-theme="dark"] .transactionsView .sectionHeader { gap: 16px; flex-wrap: wrap; border-color: var(--obs-blue-line); padding-bottom: 18px; margin-bottom: 24px; }
+html[data-theme="dark"] .transactionsView .sectionHeader h2 { font: 400 26px/1.5 "Libre Baskerville", Georgia, serif; }
+html[data-theme="dark"] .transactionsView .sectionHeader h2::after { display: none; }
+html[data-theme="dark"] .transactionsView .sectionHeader span { font-size: 15px; line-height: 1.7; }
+html[data-theme="dark"] .transactionsView .formGrid { gap: 22px 24px; }
+html[data-theme="dark"] .transactionsView .formGrid label { display: grid; min-width: 0; gap: 9px; align-content: start; }
+html[data-theme="dark"] .transactionsView .formGrid label > span { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 16px; }
+html[data-theme="dark"] .transactionsView .formGrid small { font-size: 14px; color: var(--obs-muted); }
+html[data-theme="dark"] .transactionsView .transactionReasonField { grid-column: 1 / -1; }
+html[data-theme="dark"] .transactionsView :is(input, select, textarea) { min-width: 0; min-height: 48px; border-color: rgba(185, 211, 231, .36); border-radius: 8px; background: rgba(7, 14, 29, .6); color: var(--obs-moon); padding: 12px 14px; font-size: 17px; line-height: 1.6; color-scheme: dark; }
+html[data-theme="dark"] .transactionsView :is(input, textarea)::placeholder { color: var(--obs-muted); opacity: .9; }
+html[data-theme="dark"] .transactionsView select option { background: var(--obs-night-mid); }
+html[data-theme="dark"] .transactionsView textarea { min-height: 110px; }
+html[data-theme="dark"] .transactionsView .primaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: 24px; padding: 0 24px; font-size: 16px; background: var(--obs-brass); color: var(--obs-night); }
+html[data-theme="dark"] .transactionsView .primaryButton:hover:not(:disabled) { background: var(--obs-brass-bright); }
+
+/* Keep real table cells (not grid cells) aligned with measured virtual rows. */
+html[data-theme="dark"] .transactionTableWrap { scrollbar-color: #63748c var(--obs-night-mid); }
+html[data-theme="dark"] .transactionTable { min-width: 1160px; table-layout: fixed; }
+html[data-theme="dark"] .virtualTableWrap .transactionTable { display: block; }
+html[data-theme="dark"] .virtualTableWrap .transactionTable thead { display: table; table-layout: fixed; width: 100%; }
+html[data-theme="dark"] .transactionTable :is(th, td) { padding: 20px 10px; border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .transactionTable th { background: var(--obs-night-mid); color: var(--obs-muted); font-size: 15px; }
+html[data-theme="dark"] .transactionTable td { font-size: 17px; line-height: 1.7; overflow-wrap: anywhere; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(1) { width: 11%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(2) { width: 23%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(3) { width: 6%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(4) { width: 12%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(5) { width: 15%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(6) { width: 24%; }
+html[data-theme="dark"] .transactionTable :is(th, td):nth-child(7) { width: 9%; }
+html[data-theme="dark"] .transactionTable td:nth-child(2),
+html[data-theme="dark"] .transactionTable .reasonCell { display: table-cell; }
+html[data-theme="dark"] .transactionTable td:nth-child(2) strong { display: block; font: 400 19px/1.6 "Libre Baskerville", Georgia, serif; white-space: normal; overflow-wrap: anywhere; }
+html[data-theme="dark"] .transactionTable td small { display: block; margin-top: 7px; font-size: 15px; line-height: 1.7; }
+html[data-theme="dark"] .transactionTable :is(.mutedCell, .reasonCell) { color: var(--obs-muted); }
+html[data-theme="dark"] .transactionsView :is(.operationBadge, .retractedBadge) { padding: 0; border: 0; background: transparent; color: var(--obs-brass-bright); font-size: 15px; }
+html[data-theme="dark"] .transactionsView .retractedTransaction { background: rgba(185, 211, 231, .035); }
+html[data-theme="dark"] .transactionsView .retractedLabel { font-size: 15px; white-space: normal; }
+html[data-theme="dark"] .transactionsView .retractButton { min-height: 44px; padding: 0 8px; border-color: rgba(227, 142, 149, .4); background: transparent; color: var(--red); font-size: 15px; }
+html[data-theme="dark"] .transactionsView .retractButton:hover:not(:disabled) { background: rgba(227, 142, 149, .1); border-color: var(--red); }
+html[data-theme="dark"] .transactionsView .correctionList { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 36px; }
+html[data-theme="dark"] .transactionsView .correctionRow { gap: 18px; padding: 20px 0; border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .transactionsView .correctionIdentity { gap: 8px; }
+html[data-theme="dark"] .transactionsView .correctionIdentity strong { font: 400 19px/1.6 "Libre Baskerville", Georgia, serif; white-space: normal; overflow-wrap: anywhere; }
+html[data-theme="dark"] .transactionsView .correctionIdentity small { font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+html[data-theme="dark"] .transactionsView .compactAction { min-height: 44px; gap: 7px; padding: 0 12px; font-size: 15px; flex-shrink: 0; }
+html[data-theme="dark"] .transactionsView .compactAction:hover { background: rgba(196, 154, 84, .1); border-color: var(--obs-brass); color: var(--obs-brass-bright); }
+html[data-theme="dark"] .transactionsView :is(.panelFootnote, .holdingsEmpty, .observatoryEmpty, .notice, .refreshRetryButton) { font-size: 16px; line-height: 1.8; }
+html[data-theme="dark"] .transactionsView .holdingsEmpty { border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .transactionsView .refreshRetryButton { color: var(--obs-brass-bright); }
+
+/* Portaled confirmation remains within the viewport even after table scrolling. */
+html[data-theme="dark"] .transactionDialogScope .confirmDialogBackdrop { background: rgba(3, 8, 18, .76); backdrop-filter: blur(8px); overflow: auto; }
+html[data-theme="dark"] .transactionDialogScope .confirmDialog { width: min(500px, 100%); min-width: 0; max-height: calc(100dvh - 40px); overflow: auto; border-color: var(--obs-blue-line); background: var(--obs-night-mid); padding: 28px; border-radius: 14px; }
+html[data-theme="dark"] .transactionDialogScope .confirmDialogHeader h2 { font: 400 26px/1.5 "Libre Baskerville", Georgia, serif; }
+html[data-theme="dark"] .transactionDialogScope .confirmDialog p { font-size: 17px; }
+html[data-theme="dark"] .transactionDialogScope button { min-height: 44px; font-size: 16px; }
+html[data-theme="dark"] .transactionDialogScope .modalCloseButton { min-width: 44px; flex-shrink: 0; }
+html[data-theme="dark"] [data-sonner-toast].transactionToast { border-color: rgba(225, 189, 114, .4); background: var(--obs-night-mid); color: var(--obs-moon); font-size: 16px; }
+html[data-theme="dark"] [data-sonner-toast].transactionToast [data-icon] { color: var(--obs-brass-bright); }
+html[data-theme="dark"] [data-sonner-toast].transactionToast[data-type="error"] { border-color: var(--red); }
+html[data-theme="dark"] [data-sonner-toast].transactionToast[data-type="error"] [data-icon] { color: var(--red); }
+@media (max-width: 1100px) {
+  html[data-theme="dark"] .transactionsView .formGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-theme="dark"] .transactionsView .correctionList { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  html[data-theme="dark"] .transactionsIntro { flex-direction: column; }
+  html[data-theme="dark"] .transactionsView .panel { padding: 22px 16px; }
+  html[data-theme="dark"] .transactionsView .formGrid { grid-template-columns: 1fr; }
+  html[data-theme="dark"] .transactionsView .formPanel .primaryButton { width: 100%; }
+  html[data-theme="dark"] .transactionDialogScope .confirmDialog { padding: 22px 18px; }
+  html[data-theme="dark"] .transactionDialogScope .confirmDialogActions { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="dark"] .transactionsView .panel,
+  html[data-theme="dark"] .transactionDialogScope .confirmDialogBackdrop { animation: none; transition: none; }
+}
