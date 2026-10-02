@@ -1,0 +1,184 @@
+/* Scoped detail surfaces: never inherit the retired green-paper palette. */
+html[data-theme="dark"] .trackingModalBackdrop {
+  background: rgba(3, 8, 18, .76);
+  backdrop-filter: blur(8px);
+}
+
+html[data-theme="dark"] .trackingDetail {
+  --accent: var(--obs-brass-bright);
+  --accent-deep: var(--obs-brass);
+  --ink: var(--obs-moon);
+  --muted: var(--obs-muted);
+  --line: var(--obs-blue-line);
+  --paper: var(--obs-night-mid);
+  --paper-bright: var(--obs-blue);
+  border-color: var(--obs-blue-line);
+  background: linear-gradient(145deg, rgba(27, 46, 72, .97), rgba(12, 22, 43, .98));
+  color: var(--obs-moon);
+  box-shadow: 0 32px 100px rgba(0, 0, 0, .48), inset 0 1px rgba(244, 242, 220, .06);
+  scrollbar-color: #52617a var(--obs-night-mid);
+  scrollbar-width: thin;
+}
+
+html[data-theme="dark"] .trackingDetailModalBar {
+  border: 0;
+  padding: 0 0 22px;
+  color: var(--obs-muted);
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .trackingDetail .modalCloseButton {
+  width: 40px;
+  height: 40px;
+  color: var(--obs-muted);
+}
+
+html[data-theme="dark"] .trackingDetail .pageKicker {
+  color: var(--obs-brass-bright);
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .trackingDetailIdentity h2 {
+  margin: 10px 0;
+  font-family: "Libre Baskerville", Georgia, serif;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="dark"] .trackingDetailIdentity > span { font-size: 14px; }
+
+html[data-theme="dark"] .trackingDetailBadge,
+html[data-theme="dark"] .trackingDetail .historyRangeBadge {
+  border: 0;
+  background: transparent;
+  color: var(--obs-brass-bright);
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+html[data-theme="dark"] .trackingDetailSection {
+  border-top: 0;
+  padding-top: 0;
+}
+
+html[data-theme="dark"] .trackingDetailSection .sectionHeader {
+  border-color: var(--obs-blue-line);
+  padding-bottom: 16px;
+  gap: 16px;
+}
+
+html[data-theme="dark"] .trackingDetailSection .sectionHeader span {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+html[data-theme="dark"] .trackingDetailSection .sectionHeader > svg {
+  flex-shrink: 0;
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .trackingDetail .historyStats {
+  border: 1px solid var(--obs-blue-line);
+  background: rgba(7, 14, 29, .3);
+}
+
+html[data-theme="dark"] .trackingDetail .historyStats div {
+  border-color: var(--obs-blue-line);
+  padding: 14px 12px;
+}
+
+html[data-theme="dark"] .trackingDetail .historyStats span,
+html[data-theme="dark"] .trackingDetail .historyStats small { font-size: 12px; }
+html[data-theme="dark"] .trackingDetail .historyStats small { display: block; margin: 4px 0 0; }
+html[data-theme="dark"] .trackingDetail .historyStats strong {
+  font: 600 20px/1.5 "DM Sans", "Noto Sans SC", sans-serif;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+html[data-theme="dark"] .trackingDetail .historyStats .upText { color: var(--green); }
+html[data-theme="dark"] .trackingDetail .historyStats .downText { color: var(--red); }
+html[data-theme="dark"] .trackingDetail .historyStats .flatText { color: var(--obs-muted); }
+
+html[data-theme="dark"] .trackingDetail .historyChartFooter {
+  flex-wrap: wrap;
+  font-size: 12px;
+  line-height: 1.8;
+  gap: 6px 16px;
+}
+
+html[data-theme="dark"] .trackingDetail .trackingHistoryEmpty {
+  border-color: var(--obs-blue-line);
+  background: rgba(7, 14, 29, .3);
+}
+html[data-theme="dark"] .trackingDetail .trackingHistoryEmpty p { font-size: 14px; }
+html[data-theme="dark"] .trackingDetail .trackingHistoryEmpty span { font-size: 12px; }
+html[data-theme="dark"] .trackingDetail .historyInlineNotice {
+  border-color: rgba(225, 189, 114, .3);
+  background: rgba(196, 154, 84, .08);
+  color: var(--obs-brass-bright);
+  font-size: 13px;
+}
+
+html[data-theme="dark"] .trackingDetail .trackingNameForm { max-width: none; gap: 20px; }
+html[data-theme="dark"] .trackingDetail .trackingNameForm label > span,
+html[data-theme="dark"] .trackingDetail .trackingFieldLabel { color: var(--obs-muted); font-size: 13px; }
+html[data-theme="dark"] .trackingDetail input { min-width: 0; min-height: 44px; }
+html[data-theme="dark"] .trackingDetail input::placeholder { color: var(--obs-muted); opacity: .9; }
+html[data-theme="dark"] .trackingDetail input[readonly] {
+  background: rgba(174, 190, 208, .06);
+  color: var(--obs-muted);
+  border-color: var(--obs-blue-line);
+}
+
+html[data-theme="dark"] .trackingDetail .trackingTagList > span {
+  border-color: rgba(225, 189, 114, .3);
+  background: rgba(196, 154, 84, .08);
+  color: var(--obs-brass-bright);
+  font-size: 13px;
+}
+html[data-theme="dark"] .trackingDetail .trackingTagList > span button { width: 28px; height: 28px; }
+html[data-theme="dark"] .trackingDetail .trackingTagList > small { font-size: 13px; }
+html[data-theme="dark"] .trackingDetail .trackingFormActions { flex-wrap: wrap; }
+html[data-theme="dark"] .trackingDetail .trackingFormActions .primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+html[data-theme="dark"] .trackingDetail .modalCloseButton:hover:not(:disabled),
+html[data-theme="dark"] .trackingDetail .iconButton:hover:not(:disabled),
+html[data-theme="dark"] .trackingDetail .secondaryButton:hover:not(:disabled) {
+  border-color: var(--obs-brass);
+  background: rgba(196, 154, 84, .1);
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .trackingDetail .trackingDangerZone { border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .trackingDetail .trackingDangerZone strong { font-size: 15px; }
+html[data-theme="dark"] .trackingDetail .trackingDangerZone span { font-size: 13px; line-height: 1.7; }
+html[data-theme="dark"] .trackingDetail .dangerButton {
+  border-color: rgba(227, 142, 149, .45);
+  background: rgba(227, 142, 149, .06);
+  color: var(--red);
+  min-height: 44px;
+  font-size: 14px;
+}
+html[data-theme="dark"] .trackingDetail .dangerButton:hover:not(:disabled) { background: rgba(227, 142, 149, .14); }
+html[data-theme="dark"] .trackingDetail .confirmDialogBackdrop { background: rgba(3, 8, 18, .8); }
+html[data-theme="dark"] .trackingDetail .confirmDialog { border-color: var(--obs-blue-line); background: var(--obs-night-mid); }
+html[data-theme="dark"] .trackingDetail .confirmDialogActions .secondaryButton { background: transparent; min-height: 44px; }
+
+@media (max-width: 560px) {
+  html[data-theme="dark"] .trackingDetailHeader { grid-template-columns: 1fr; gap: 8px; }
+  html[data-theme="dark"] .trackingDetailBadge { grid-column: 1; }
+  html[data-theme="dark"] .trackingDetail .historyStats div { padding: 12px; }
+  html[data-theme="dark"] .trackingDetail .historyStats strong { font-size: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="dark"] .trackingModalBackdrop,
+  html[data-theme="dark"] .trackingDetail .confirmDialogBackdrop { animation: none; }
+}

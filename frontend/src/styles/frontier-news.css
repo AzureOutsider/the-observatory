@@ -1,0 +1,162 @@
+/* The newsroom shares Observatory surfaces; financial changes alone use red/green. */
+html[data-theme="dark"] [data-sonner-toast].frontierToast {
+  border-color: rgba(225, 189, 114, .4);
+  background: var(--obs-night-mid);
+  color: var(--obs-moon);
+}
+html[data-theme="dark"] [data-sonner-toast].frontierToast [data-icon] { color: var(--obs-brass-bright); }
+html[data-theme="dark"] [data-sonner-toast].frontierToast[data-type="error"] { border-color: var(--red); }
+html[data-theme="dark"] [data-sonner-toast].frontierToast[data-type="error"] [data-icon] { color: var(--red); }
+
+html[data-theme="dark"] .frontierLayout {
+  --accent: var(--obs-brass-bright);
+  --accent-deep: var(--obs-brass);
+  --ink: var(--obs-moon);
+  --muted: var(--obs-muted);
+  --line: var(--obs-blue-line);
+  --surface-strong: rgba(7, 14, 29, .36);
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  min-width: 0;
+}
+
+html[data-theme="dark"] .frontierLayout > .panel { min-width: 0; }
+html[data-theme="dark"] .frontierLayout .sectionHeader { border-color: var(--obs-blue-line); }
+html[data-theme="dark"] .frontierLayout .sectionHeader > svg { color: var(--obs-brass-bright); }
+html[data-theme="dark"] .frontierLayout .pageKicker { color: var(--obs-brass-bright); font-size: 12px; margin-bottom: 10px; }
+html[data-theme="dark"] .frontierLayout .sectionHeader span { font-size: 14px; }
+
+html[data-theme="dark"] .frontierLayout .tagPanel { padding: 22px 18px; }
+html[data-theme="dark"] .frontierLayout .tagRail {
+  gap: 4px;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #52617a transparent;
+}
+html[data-theme="dark"] .frontierLayout .tagFilter {
+  min-height: 42px;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--obs-muted);
+  font-size: 15px;
+}
+html[data-theme="dark"] .frontierLayout .tagFilter em {
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: 400 13px/1.5 "DM Sans", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+html[data-theme="dark"] .frontierLayout .tagFilter.active {
+  border-color: rgba(225, 189, 114, .28);
+  background: rgba(196, 154, 84, .1);
+  box-shadow: inset 2px 0 var(--obs-brass-bright);
+  color: var(--obs-brass-bright);
+}
+
+html[data-theme="dark"] .frontierLayout .impactStrip { gap: 10px; margin: 20px 0; }
+html[data-theme="dark"] .frontierLayout .impactStrip button {
+  min-height: 76px;
+  border-color: rgba(225, 189, 114, .24);
+  border-radius: 0;
+  background: linear-gradient(125deg, rgba(196, 154, 84, .09), rgba(7, 14, 29, .25));
+  padding: 14px 16px;
+}
+html[data-theme="dark"] .frontierLayout .impactStrip strong {
+  color: var(--obs-brass-bright);
+  font: 400 19px/1.5 "Libre Baskerville", Georgia, serif;
+}
+html[data-theme="dark"] .frontierLayout .impactStrip span { font-size: 13px; }
+
+html[data-theme="dark"] .frontierLayout .newsFilterBar {
+  border-color: var(--obs-blue-line);
+  gap: 16px 20px;
+  padding: 16px 0;
+  margin-bottom: 20px;
+}
+html[data-theme="dark"] .frontierLayout .newsFilterBar label > span { font-size: 13px; }
+html[data-theme="dark"] .frontierLayout .newsFilterBar select { min-height: 42px; min-width: 160px; font-size: 14px; }
+html[data-theme="dark"] .frontierLayout .newsFilterBar .newsToggle { min-height: 42px; gap: 10px; cursor: pointer; }
+html[data-theme="dark"] .frontierLayout .newsToggle span { white-space: nowrap; color: var(--obs-muted); }
+html[data-theme="dark"] .frontierLayout .newsToggle input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; cursor: pointer; }
+
+html[data-theme="dark"] .frontierLayout .frontierNewsList { gap: 14px; }
+html[data-theme="dark"] .frontierLayout .frontierNewsItem {
+  border-color: var(--obs-blue-line);
+  border-radius: 0;
+  background: var(--surface-strong);
+  padding: 20px 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html[data-theme="dark"] .frontierLayout .frontierNewsItem > a,
+html[data-theme="dark"] .frontierLayout .frontierNewsItem > strong {
+  color: var(--obs-moon);
+  font: 400 19px/1.7 "Libre Baskerville", Georgia, serif;
+}
+html[data-theme="dark"] .frontierLayout .frontierNewsItem > a:hover { color: var(--obs-brass-bright); text-decoration: underline; text-underline-offset: 5px; }
+html[data-theme="dark"] .frontierLayout .frontierNewsSummary { max-width: 90ch; margin-top: 10px; color: var(--obs-muted); font-size: 15px; line-height: 1.85; }
+html[data-theme="dark"] .frontierLayout .newsMeta { flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 12px; }
+html[data-theme="dark"] .frontierLayout .newsMeta > span { color: var(--obs-brass-bright); font-size: 13px; }
+html[data-theme="dark"] .frontierLayout .newsMeta > time { color: var(--obs-muted); font-size: 12px; }
+html[data-theme="dark"] .frontierLayout .importanceStars { color: var(--obs-brass); font-style: normal; font-size: 13px; }
+html[data-theme="dark"] .frontierLayout .newsMeta small { border-color: var(--obs-blue-line); color: var(--obs-muted); font-size: 12px; }
+html[data-theme="dark"] .frontierLayout .newsTags button {
+  border-color: var(--obs-blue-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--obs-muted);
+  min-height: 28px;
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .frontierLayout .relatedHoldings { border-top: 1px solid var(--obs-blue-line); padding-top: 12px; margin-top: 14px; gap: 8px 12px; }
+html[data-theme="dark"] .frontierLayout .relatedHoldings > span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--obs-muted);
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+html[data-theme="dark"] .frontierLayout .relatedHoldings em { font-style: normal; font-variant-numeric: tabular-nums; }
+html[data-theme="dark"] .frontierLayout .relatedHoldings .flatText { color: var(--obs-muted); }
+html[data-theme="dark"] .frontierLayout .trackingEmpty { border-color: var(--obs-blue-line); background: var(--surface-strong); padding: 24px; }
+html[data-theme="dark"] .frontierLayout .trackingEmpty span { font-size: 14px; line-height: 1.7; }
+html[data-theme="dark"] .frontierLayout .notice { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+html[data-theme="dark"] .frontierLayout .refreshRetryButton { color: var(--obs-brass-bright); font-size: 13px; }
+
+html[data-theme="dark"] .frontierLayout .tagFilter:hover,
+html[data-theme="dark"] .frontierLayout .impactStrip button:hover,
+html[data-theme="dark"] .frontierLayout .impactStrip button[aria-pressed="true"],
+html[data-theme="dark"] .frontierLayout .newsTags button:hover,
+html[data-theme="dark"] .frontierLayout .newsTags button[aria-pressed="true"],
+html[data-theme="dark"] .frontierLayout .iconButton:hover:not(:disabled) {
+  border-color: var(--obs-brass);
+  background: rgba(196, 154, 84, .1);
+  color: var(--obs-brass-bright);
+}
+
+@media (max-width: 1100px) {
+  html[data-theme="dark"] .frontierLayout { grid-template-columns: 1fr; }
+  html[data-theme="dark"] .frontierLayout .tagPanel { position: static; }
+  html[data-theme="dark"] .frontierLayout .tagRail { display: flex; max-height: none; overflow-x: auto; gap: 8px; }
+  html[data-theme="dark"] .frontierLayout .tagFilter { flex: 0 0 auto; gap: 12px; }
+}
+@media (max-width: 560px) {
+  html[data-theme="dark"] .frontierLayout > .panel { padding: 18px 14px; }
+  html[data-theme="dark"] .frontierLayout .frontierNewsItem { padding: 16px; }
+  html[data-theme="dark"] .frontierLayout .frontierNewsItem > a,
+  html[data-theme="dark"] .frontierLayout .frontierNewsItem > strong { font-size: 18px; }
+  html[data-theme="dark"] .frontierLayout .newsFilterBar { display: grid; grid-template-columns: 1fr; }
+  html[data-theme="dark"] .frontierLayout .newsFilterBar label,
+  html[data-theme="dark"] .frontierLayout .newsFilterBar select { min-width: 0; width: 100%; }
+  html[data-theme="dark"] .frontierLayout .newsTags { justify-content: flex-start; }
+}

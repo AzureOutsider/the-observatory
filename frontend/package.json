@@ -1,0 +1,56 @@
+{
+  "name": "investment-observatory-frontend",
+  "private": true,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run",
+    "test:manual-refresh": "node scripts/check-manual-refresh.cjs",
+    "test:sidebar": "node scripts/check-manual-refresh.cjs --sidebar",
+    "test:frontier": "node scripts/check-manual-refresh.cjs --frontier",
+    "test:holdings": "node scripts/check-manual-refresh.cjs --holdings",
+    "test:transactions": "node scripts/check-manual-refresh.cjs --transactions",
+    "test:agent": "node scripts/check-manual-refresh.cjs --agent",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.3.3",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-virtual": "^3.14.10",
+    "@vitejs/plugin-react": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "echarts": "latest",
+    "echarts-for-react": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0",
+    "typescript": "latest",
+    "vite": "latest",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/oxide-win32-x64-msvc": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.4",
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "postcss": "^8.5.28",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
+  }
+}
