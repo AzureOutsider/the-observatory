@@ -13,6 +13,12 @@ import { toast } from "sonner";
 
 const operationLabels: Record<string, string> = { buy: "买入", sell: "卖出", dividend: "分红", transfer: "转入", adjustment: "调整", note: "备注" };
 
+function localDate() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
 export function Transactions() {
   const { data: rows = [], isLoading: transactionsLoading, isError: transactionsError, error: transactionsErrorDetail, refetch: refetchTransactions } = useTransactions();
   const { data: holdings = [] } = useHoldings();
@@ -20,6 +26,14 @@ export function Transactions() {
   const retractTransaction = useRetractTransaction();
   const [editing, setEditing] = useState<Holding | null>(null);
   const [pendingRetraction, setPendingRetraction] = useState<Transaction | null>(null);
+  const [operation, setOperation] = useState("buy");
+  const [tradeDate, setTradeDate] = useState(localDate);
+  const [units, setUnits] = useState("");
+  const [price, setPrice] = useState("");
+  const [fee, setFee] = useState("0.1");
+  const isNote = operation === "note";
+  const calculatedAmount = Number(units) * Number(price) + Number(fee || "0");
+  const amountPreview = isNote ? "0.00" : units && price && Number.isFinite(calculatedAmount) ? calculatedAmount.toFixed(2) : "--";
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const virtualized = rows.length > 100;
   const rowVirtualizer = useVirtualizer({
@@ -37,10 +51,15 @@ export function Transactions() {
     try {
       await createTransaction.mutateAsync({
         asset_code: readFormValue(form, "asset_code"), asset_type: readFormValue(form, "asset_type") || "fund", asset_name: readOptionalFormValue(form, "asset_name"),
-        operation: readFormValue(form, "operation"), trade_date: readFormValue(form, "trade_date"), amount: readFormValue(form, "amount"), units: readOptionalFormValue(form, "units"),
-        price: readOptionalFormValue(form, "price"), fee: readFormValue(form, "fee") || "0", reason: readOptionalFormValue(form, "reason"),
+        operation: readFormValue(form, "operation"), trade_date: readFormValue(form, "trade_date"), units: readOptionalFormValue(form, "units"),
+        price: readOptionalFormValue(form, "price"), fee: isNote ? "0" : readFormValue(form, "fee") || "0", reason: readOptionalFormValue(form, "reason"),
       });
       formElement.reset();
+      setOperation("buy");
+      setTradeDate(localDate());
+      setUnits("");
+      setPrice("");
+      setFee("0.1");
       toast.success("操作已记录，持仓已同步", { className: "transactionToast" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "记录失败，请稍后重试", { className: "transactionToast" });
@@ -77,12 +96,12 @@ export function Transactions() {
             <label><span>标的代码 <small>必填</small></span><input name="asset_code" placeholder="例如：000001" required /></label>
             <label><span>标的名称 <small>选填</small></span><input name="asset_name" placeholder="填写标的名称" /></label>
             <label><span>标的类型</span><select name="asset_type" defaultValue="fund"><option value="fund">基金</option><option value="stock">股票</option><option value="index">指数</option></select></label>
-            <label><span>操作类型</span><select name="operation" defaultValue="buy"><option value="buy">买入</option><option value="sell">卖出</option><option value="dividend">分红</option><option value="transfer">转入</option><option value="adjustment">调整</option><option value="note">备注</option></select></label>
-            <label><span>交易日期 <small>必填</small></span><input name="trade_date" type="date" required /></label>
-            <label><span>金额（元） <small>必填</small></span><input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required /></label>
-            <label><span>份额 <small>选填 · 最多两位小数</small></span><input name="units" type="number" min="0" step="0.01" placeholder="0.00" /></label>
-            <label><span>价格（元） <small>选填</small></span><input name="price" type="number" min="0" step="0.000001" placeholder="0.000000" /></label>
-            <label><span>手续费（元） <small>选填</small></span><input name="fee" type="number" min="0" step="0.01" placeholder="默认为 0.00" /></label>
+            <label><span>操作类型</span><select name="operation" value={operation} onChange={(event) => setOperation(event.target.value)}><option value="buy">买入</option><option value="sell">卖出</option><option value="dividend">分红</option><option value="transfer">转入</option><option value="adjustment">调整</option><option value="note">备注</option></select></label>
+            <label><span>交易日期 <small>必填</small></span><input name="trade_date" type="date" value={tradeDate} onChange={(event) => setTradeDate(event.target.value)} required /></label>
+            <label><span>份额 <small>{isNote ? "选填" : "必填"} · 最多两位小数</small></span><input name="units" type="number" min="0" step="0.01" placeholder="0.00" value={units} onChange={(event) => setUnits(event.target.value)} required={!isNote} /></label>
+            <label><span>价格（元） <small>{isNote ? "选填" : "必填"}</small></span><input name="price" type="number" min="0" step="0.000001" placeholder="0.000000" value={price} onChange={(event) => setPrice(event.target.value)} required={!isNote} /></label>
+            <label><span>手续费（元） <small>默认 0.10</small></span><input name="fee" type="number" min="0" step="0.01" value={isNote ? "0" : fee} onChange={(event) => setFee(event.target.value)} disabled={isNote} /></label>
+            <div className="transactionAmountPreview"><span>自动计算金额（元）</span><output aria-label="自动计算金额" aria-live="polite">¥{amountPreview}</output><small>{isNote ? "备注不影响金额和持仓" : "份额 × 价格 + 手续费"}</small></div>
             <label className="transactionReasonField"><span>记录与复盘 <small>选填</small></span><textarea name="reason" placeholder="记录这次操作的理由、相关信息或交易纪律" /></label>
           </div>
           <button className="primaryButton" type="submit" disabled={createTransaction.isPending}><Repeat2 size={15} />{createTransaction.isPending ? "记录中…" : "记录操作"}</button>

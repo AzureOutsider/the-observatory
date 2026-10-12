@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,7 +13,7 @@ router = APIRouter(tags=["transactions"])
 
 
 def _money(value: Decimal | None, places: str = "0.0000") -> Decimal:
-    return Decimal(str(value or 0)).quantize(Decimal(places))
+    return Decimal(str(value or 0)).quantize(Decimal(places), rounding=ROUND_HALF_UP)
 
 
 def _optional_money(value: Decimal | None, places: str) -> Decimal | None:
@@ -24,7 +24,28 @@ def _audit_money(value: Decimal | None, places: str = "0.0000") -> str | None:
     return None if value is None else str(_money(value, places))
 
 
-def _find_recent_duplicate(payload: TransactionCreate, asset_id: int, session: Session) -> Transaction | None:
+def _calculated_amount(payload: TransactionCreate) -> Decimal:
+    """Calculate trade cash from shares, unit price and fee at the API boundary."""
+    if payload.operation == "note":
+        return Decimal("0.0000")
+    if payload.units is not None and payload.price is not None:
+        return _money(_money(payload.units, "0.000000") * _money(payload.price, "0.000000") + _money(payload.fee))
+    # Retain the old amount-only API for existing integrations. The web form
+    # supplies shares and price, and any caller-supplied amount is ignored there.
+    return _money(payload.amount)
+
+
+def _holding_cost(holding: Holding) -> Decimal | None:
+    if holding.cost_basis is not None:
+        return holding.cost_basis
+    if holding.profit is not None:
+        return max(Decimal("0"), (holding.amount or Decimal("0")) - holding.profit)
+    if not holding.amount and not holding.units:
+        return Decimal("0")
+    return None
+
+
+def _find_recent_duplicate(payload: TransactionCreate, asset_id: int, amount: Decimal, session: Session) -> Transaction | None:
     """Treat an accidental rapid retry as the same write, without blocking later trades."""
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=45)
     query = (
@@ -33,7 +54,7 @@ def _find_recent_duplicate(payload: TransactionCreate, asset_id: int, session: S
             Transaction.asset_id == asset_id,
             Transaction.operation == payload.operation,
             Transaction.trade_date == payload.trade_date,
-            Transaction.amount == _money(payload.amount),
+            Transaction.amount == amount,
             Transaction.fee == _money(payload.fee),
             Transaction.created_at >= cutoff,
             Transaction.retracted_at.is_(None),
@@ -71,15 +92,34 @@ def _apply_transaction_to_holding(transaction: Transaction, session: Session) ->
         holding.last_update_type = "transaction"
         return
 
+    old_units = holding.units or Decimal("0")
+    old_cost = _holding_cost(holding)
+    if old_cost is not None:
+        if transaction.operation in {"buy", "transfer"}:
+            holding.cost_basis = _money(old_cost + amount)
+        elif transaction.operation == "sell":
+            if units is not None and old_units > 0:
+                holding.cost_basis = _money(old_cost * max(Decimal("0"), old_units - units) / old_units)
+            elif holding.amount:
+                holding.cost_basis = _money(old_cost * max(Decimal("0"), holding.amount - amount) / holding.amount)
+            else:
+                holding.cost_basis = old_cost
+        # Record the cost removed on a sale so even a full-sale retraction can
+        # restore it without inferring it from the remaining (zero) position.
+        transaction.holding_cost_delta = holding.cost_basis - old_cost
+
     sign = Decimal("-1") if transaction.operation == "sell" else Decimal("1")
     holding.amount = max(Decimal("0"), (holding.amount or Decimal("0")) + sign * amount)
     if units is not None:
         holding.units = max(Decimal("0"), (holding.units or Decimal("0")) + sign * units)
+    if holding.cost_basis is not None:
+        holding.profit = _money(holding.amount - holding.cost_basis)
     holding.last_update_type = "transaction"
 
 
 @router.post("/transactions", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
 def create_transaction(payload: TransactionCreate, session: Session = Depends(get_session)):
+    amount = _calculated_amount(payload)
     asset = (
         session.query(Asset)
         .filter(Asset.code == payload.asset_code, Asset.asset_type == payload.asset_type)
@@ -94,7 +134,7 @@ def create_transaction(payload: TransactionCreate, session: Session = Depends(ge
         session.add(asset)
         session.flush()
 
-    duplicate = _find_recent_duplicate(payload, asset.id, session)
+    duplicate = _find_recent_duplicate(payload, asset.id, amount, session)
     if duplicate is not None:
         return duplicate
 
@@ -102,7 +142,7 @@ def create_transaction(payload: TransactionCreate, session: Session = Depends(ge
         asset_id=asset.id,
         operation=payload.operation,
         trade_date=payload.trade_date,
-        amount=_money(payload.amount),
+        amount=amount,
         units=_money(payload.units, "0.000000") if payload.units is not None else None,
         price=_money(payload.price, "0.000000") if payload.price is not None else None,
         fee=_money(payload.fee),
@@ -136,15 +176,27 @@ def delete_transaction(transaction_id: int, session: Session = Depends(get_sessi
         "holding_id": holding.id if holding else None,
         "amount_before": _audit_money(holding.amount) if holding else None,
         "units_before": _audit_money(holding.units, "0.000000") if holding and holding.units is not None else None,
+        "cost_basis_before": _audit_money(holding.cost_basis) if holding else None,
     }
     if holding is not None and transaction.operation in {"buy", "sell", "transfer"}:
+        cost = _holding_cost(holding)
+        cost_delta = transaction.holding_cost_delta
+        if cost is not None:
+            if cost_delta is None and transaction.operation in {"buy", "transfer"}:
+                cost_delta = transaction.amount or Decimal("0")
+            if cost_delta is None and transaction.operation == "sell":
+                raise HTTPException(status_code=400, detail="旧卖出流水缺少成本记录，请使用持仓修正核对成本")
+            holding.cost_basis = _money(max(Decimal("0"), cost - (cost_delta or Decimal("0"))))
         sign = Decimal("-1") if transaction.operation in {"buy", "transfer"} else Decimal("1")
         holding.amount = max(Decimal("0"), (holding.amount or Decimal("0")) + sign * (transaction.amount or Decimal("0")))
         if transaction.units is not None:
             holding.units = max(Decimal("0"), (holding.units or Decimal("0")) + sign * transaction.units)
+        if holding.cost_basis is not None:
+            holding.profit = _money(holding.amount - holding.cost_basis)
         holding.last_update_type = "transaction_retraction"
         effect["amount_after"] = _audit_money(holding.amount)
         effect["units_after"] = _audit_money(holding.units, "0.000000") if holding.units is not None else None
+        effect["cost_basis_after"] = _audit_money(holding.cost_basis)
 
     transaction.retracted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     transaction.retraction_reason = "用户手动撤回"

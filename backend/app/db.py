@@ -46,6 +46,7 @@ def init_db() -> None:
             "last_update_type": "VARCHAR(32)",
         },
         "transactions": {
+            "holding_cost_delta": "NUMERIC(18, 4)",
             "retracted_at": "DATETIME",
             "retraction_reason": "TEXT",
             "retraction_effect": "TEXT",

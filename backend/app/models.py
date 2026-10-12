@@ -80,6 +80,7 @@ class Transaction(TimestampMixin, Base):
     units: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
     price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 6), nullable=True)
     fee: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
+    holding_cost_delta: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 4), nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     retracted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
     retraction_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

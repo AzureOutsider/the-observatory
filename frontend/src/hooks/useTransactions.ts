@@ -18,7 +18,6 @@ export type CreateTransactionPayload = {
   asset_name?: string;
   operation: string;
   trade_date: string;
-  amount: string;
   units?: string;
   price?: string;
   fee: string;

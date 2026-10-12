@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AssetRead(BaseModel):
@@ -49,11 +49,17 @@ class TransactionCreate(BaseModel):
     asset_name: Optional[str] = None
     operation: str = Field(pattern="^(buy|sell|dividend|transfer|adjustment|note)$")
     trade_date: date
-    amount: Decimal = Field(ge=0)
+    amount: Optional[Decimal] = Field(default=None, ge=0)
     units: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
     price: Optional[Decimal] = Field(default=None, ge=0)
-    fee: Decimal = Field(default=0, ge=0)
+    fee: Decimal = Field(default=Decimal("0.1"), ge=0)
     reason: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_trade_inputs(self):
+        if self.operation != "note" and self.amount is None and (self.units is None or self.price is None):
+            raise ValueError("请填写份额和价格")
+        return self
 
 
 class TransactionRead(BaseModel):

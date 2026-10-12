@@ -83,3 +83,24 @@ def test_list_holdings_restores_missing_snapshot_and_deduplicates_exact_retries(
     assert response.status_code == 200
     assert response.json()[0]["asset"]["code"] == "519900"
     assert Decimal(response.json()[0]["amount"]) == Decimal("83.4000")
+    assert Decimal(response.json()[0]["cost_basis"]) == Decimal("83.4000")
+
+
+def test_restore_missing_snapshot_reduces_average_cost_on_sale(session):
+    asset = Asset(code="519900", name="Example ETF", asset_type="fund")
+    session.add(asset)
+    session.flush()
+    session.add_all([
+        Transaction(asset_id=asset.id, operation="buy", trade_date=date(2026, 1, 2),
+                    amount=Decimal("300"), units=Decimal("400"), fee=Decimal("0")),
+        Transaction(asset_id=asset.id, operation="sell", trade_date=date(2026, 1, 3),
+                    amount=Decimal("100"), units=Decimal("100"), fee=Decimal("0")),
+    ])
+    session.commit()
+
+    response = make_client(session).get("/api/holdings")
+
+    assert response.status_code == 200
+    row = response.json()[0]
+    assert Decimal(row["units"]) == Decimal("300")
+    assert Decimal(row["cost_basis"]) == Decimal("225")

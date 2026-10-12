@@ -1,6 +1,6 @@
 from pathlib import Path
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
@@ -47,6 +47,7 @@ def _restore_missing_holdings(session: Session) -> None:
             .all()
         )
         amount = Decimal("0")
+        cost_basis = Decimal("0")
         units = Decimal("0")
         has_units = False
         seen: set[tuple[object, ...]] = set()
@@ -73,11 +74,25 @@ def _restore_missing_holdings(session: Session) -> None:
                 continue
             sign = Decimal("-1") if transaction.operation == "sell" else Decimal("1")
             amount = max(Decimal("0"), amount + sign * (transaction.amount or Decimal("0")))
+            if transaction.operation in {"buy", "transfer"}:
+                cost_basis += transaction.amount or Decimal("0")
+            elif transaction.operation == "sell":
+                if transaction.holding_cost_delta is not None:
+                    cost_basis = max(Decimal("0"), cost_basis + transaction.holding_cost_delta)
+                elif transaction.units is not None and units > 0:
+                    cost_basis = max(Decimal("0"), cost_basis * max(Decimal("0"), units - transaction.units) / units)
             if transaction.units is not None:
                 units = max(Decimal("0"), units + sign * transaction.units)
                 has_units = True
         if seen:
-            session.add(Holding(asset_id=asset_id, amount=amount, units=units if has_units else None))
+            cost_basis = cost_basis.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP) if has_units else None
+            session.add(Holding(
+                asset_id=asset_id,
+                amount=amount,
+                units=units if has_units else None,
+                cost_basis=cost_basis,
+                profit=amount - cost_basis if cost_basis is not None else None,
+            ))
             changed = True
     if changed:
         session.commit()

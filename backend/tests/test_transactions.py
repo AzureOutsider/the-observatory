@@ -1,11 +1,13 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
+import pytest
 
 from app.db import get_session
 from app.main import create_app
 from app.models import Asset, Holding, Transaction
+from app.services.portfolio_valuation import refresh_closed_portfolio
 
 
 def override_session(session):
@@ -38,10 +40,9 @@ def test_create_buy_transaction(session):
             "asset_type": "fund",
             "operation": "buy",
             "trade_date": str(date(2026, 7, 8)),
-            "amount": "100.00",
             "units": "10.0",
             "price": "10.0",
-            "fee": "0",
+            "fee": "0.1",
             "reason": "initial test buy",
         },
     )
@@ -49,11 +50,66 @@ def test_create_buy_transaction(session):
     assert response.status_code == 201
     row = session.query(Transaction).one()
     assert row.operation == "buy"
-    assert row.amount == Decimal("100.0000")
+    assert row.amount == Decimal("100.1000")
     assert row.asset.code == "000001"
     holding = session.query(Holding).one()
-    assert holding.amount == Decimal("100.0000")
+    assert holding.amount == Decimal("100.1000")
     assert holding.units == Decimal("10.000000")
+    assert holding.cost_basis == Decimal("100.1000")
+
+
+def test_buy_accumulates_cost_basis_and_units(session):
+    client = make_client(session)
+    # An existing valued position must retain its previous cost, not its market value.
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("100"), amount=Decimal("90"), cost_basis=Decimal("80")))
+    session.commit()
+    second = client.post("/api/transactions", json={"asset_code": "519900", "operation": "buy",
+                         "trade_date": "2026-01-02", "units": "300", "price": "0.75"})
+    assert second.status_code == 201
+    assert Decimal(second.json()["fee"]) == Decimal("0.1")
+    holding = session.query(Holding).one()
+    assert holding.units == Decimal("400.000000")
+    assert holding.cost_basis == Decimal("305.1000")
+    assert holding.profit == holding.amount - holding.cost_basis
+    assert client.delete(f"/api/transactions/{second.json()['id']}").status_code == 200
+    session.refresh(holding)
+    assert holding.cost_basis == Decimal("80")
+    assert holding.units == Decimal("100")
+
+
+def test_buy_keeps_manually_corrected_cost_even_when_history_matches_units(session):
+    client = make_client(session)
+    created = client.post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "100", "price": "0.8", "fee": "0",
+    })
+    assert created.status_code == 201
+    holding = session.query(Holding).one()
+    holding.cost_basis = Decimal("75")
+    session.commit()
+
+    added = client.post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-03",
+        "units": "300", "price": "0.75", "fee": "0.1",
+    })
+    assert added.status_code == 201
+    session.refresh(holding)
+    assert holding.cost_basis == Decimal("300.1")
+    assert holding.units == Decimal("400")
+
+
+@pytest.mark.parametrize("profit, expected_cost", [(Decimal("10"), Decimal("110.1")), (None, None)])
+def test_existing_position_without_cost_is_not_assumed_to_have_zero_cost(session, profit, expected_cost):
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("100"), amount=Decimal("100"), profit=profit))
+    session.commit()
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "10", "price": "2", "fee": "0.1",
+    })
+    assert response.status_code == 201
+    assert session.query(Holding).one().cost_basis == expected_cost
 
 
 def test_duplicate_transaction_retry_does_not_duplicate_holding(session):
@@ -103,6 +159,116 @@ def test_delete_buy_transaction_reverses_holding(session):
     holding = session.query(Holding).one()
     assert holding.amount == Decimal("0.0000")
     assert holding.units == Decimal("0.000000")
+    assert holding.cost_basis == Decimal("0")
+
+
+def test_amount_is_calculated_even_if_caller_sends_incorrect_amount(session):
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "10.12", "price": "1.234567", "amount": "9999",
+    })
+    assert response.status_code == 201
+    assert Decimal(response.json()["amount"]) == Decimal("12.5938")
+
+
+def test_trade_from_operation_form_succeeds_without_amount(session):
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "588080", "asset_type": "fund", "operation": "buy",
+        "trade_date": "2026-10-12", "units": "300", "price": "1.462", "fee": "0.1",
+    })
+
+    assert response.status_code == 201
+    assert Decimal(response.json()["amount"]) == Decimal("438.7000")
+    assert response.json()["asset"]["code"] == "588080"
+    holding = session.query(Holding).one()
+    assert holding.units == Decimal("300.000000")
+    assert holding.amount == Decimal("438.7000")
+
+
+@pytest.mark.parametrize("operation", ["buy", "sell", "transfer", "adjustment", "dividend"])
+def test_missing_calculation_inputs_rejected(session, operation):
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": operation, "trade_date": "2026-01-02", "units": "10",
+    })
+    assert response.status_code == 422
+    assert session.query(Transaction).count() == 0
+
+
+def test_sell_reduces_average_cost_and_full_sale_retraction_restores_it(session):
+    client = make_client(session)
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("400"), amount=Decimal("400"), cost_basis=Decimal("300")))
+    session.commit()
+    payload = {"asset_code": "519900", "operation": "sell", "trade_date": "2026-01-03", "price": "1", "fee": "0"}
+    partial = client.post("/api/transactions", json={**payload, "units": "100"})
+    assert partial.status_code == 201
+    holding = session.query(Holding).one()
+    assert holding.units == Decimal("300")
+    assert holding.cost_basis == Decimal("225")
+    full = client.post("/api/transactions", json={**payload, "units": "300"})
+    assert full.status_code == 201
+    session.refresh(holding)
+    assert holding.cost_basis == Decimal("0")
+    assert client.delete(f"/api/transactions/{full.json()['id']}").status_code == 200
+    session.refresh(holding)
+    assert holding.cost_basis == Decimal("225")
+    assert holding.units == Decimal("300")
+
+
+def test_close_valuation_uses_accumulated_cost_after_added_buy(session):
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("100"), amount=Decimal("90"), cost_basis=Decimal("80")))
+    session.commit()
+    added = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "300", "price": "0.75", "fee": "0.1",
+    })
+    assert added.status_code == 201
+    result = refresh_closed_portfolio(session, now=datetime(2026, 1, 2, 15, 6),
+                                     fund_fetcher=lambda _: {"ok": True, "estimate_nav": "0.77"})
+
+    assert result["status"] == "completed"
+    holding = session.query(Holding).one()
+    assert holding.amount == Decimal("308")
+    assert holding.cost_basis == Decimal("305.1")
+    assert holding.profit == Decimal("2.9")
+
+
+@pytest.mark.parametrize("operation", ["dividend", "adjustment", "transfer"])
+def test_other_operations_compute_amount(session, operation):
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": operation, "trade_date": "2026-01-02",
+        "units": "10", "price": "2", "fee": "0",
+    })
+    assert response.status_code == 201
+    assert Decimal(response.json()["amount"]) == Decimal("20")
+
+
+def test_note_does_not_require_or_change_amount(session):
+    response = make_client(session).post("/api/transactions", json={
+        "asset_code": "519900", "operation": "note", "trade_date": "2026-01-02", "reason": "Example note",
+    })
+    assert response.status_code == 201
+    assert Decimal(response.json()["amount"]) == 0
+    assert session.query(Holding).count() == 0
+
+
+def test_legacy_sale_without_cost_record_does_not_guess_retraction_cost(session):
+    asset = Asset(code="519900", name="Example ETF", asset_type="fund")
+    holding = Holding(asset=asset, units=Decimal("300"), amount=Decimal("300"), cost_basis=Decimal("225"))
+    session.add(holding)
+    session.flush()
+    transaction = Transaction(asset_id=asset.id, operation="sell", trade_date=date(2026, 1, 2),
+                              amount=Decimal("100"), units=Decimal("100"), fee=Decimal("0"))
+    session.add(transaction)
+    session.commit()
+
+    response = make_client(session).delete(f"/api/transactions/{transaction.id}")
+
+    assert response.status_code == 400
+    assert transaction.retracted_at is None
+    assert holding.units == Decimal("300")
+    assert holding.cost_basis == Decimal("225")
 
 
 def test_adjustment_transaction_cannot_be_deleted(session):
