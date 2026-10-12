@@ -171,7 +171,30 @@ def delete_transaction(transaction_id: int, session: Session = Depends(get_sessi
     if transaction.operation == "adjustment":
         raise HTTPException(status_code=400, detail="调整流水无法安全撤回，请使用持仓修正")
 
+    position_operations = ("buy", "sell", "transfer", "adjustment")
+    if transaction.operation in position_operations:
+        later_operation = (
+            session.query(Transaction.id)
+            .filter(
+                Transaction.asset_id == transaction.asset_id,
+                Transaction.id > transaction.id,
+                Transaction.operation.in_(position_operations),
+                Transaction.retracted_at.is_(None),
+            )
+            .first()
+        )
+        if later_operation is not None:
+            raise HTTPException(status_code=400, detail="请先按倒序撤回后续持仓操作，避免成本和持仓错位")
+
     holding = session.query(Holding).filter(Holding.asset_id == transaction.asset_id).one_or_none()
+    if (
+        holding is not None
+        and transaction.operation in position_operations
+        and holding.last_manual_adjustment_at is not None
+        and transaction.created_at is not None
+        and holding.last_manual_adjustment_at > transaction.created_at
+    ):
+        raise HTTPException(status_code=400, detail="这条流水之后已手动修正持仓，请先核对持仓再撤回")
     effect = {
         "holding_id": holding.id if holding else None,
         "amount_before": _audit_money(holding.amount) if holding else None,

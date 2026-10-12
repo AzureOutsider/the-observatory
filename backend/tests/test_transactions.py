@@ -215,6 +215,68 @@ def test_sell_reduces_average_cost_and_full_sale_retraction_restores_it(session)
     assert holding.units == Decimal("300")
 
 
+def test_older_position_transaction_must_be_retracted_after_later_changes(session):
+    client = make_client(session)
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("100"), amount=Decimal("200"), cost_basis=Decimal("100")))
+    session.commit()
+    buy = client.post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "100", "price": "2", "fee": "0",
+    })
+    sale = client.post("/api/transactions", json={
+        "asset_code": "519900", "operation": "sell", "trade_date": "2026-01-03",
+        "units": "50", "price": "2", "fee": "0",
+    })
+    assert buy.status_code == 201
+    assert sale.status_code == 201
+    holding = session.query(Holding).one()
+    assert holding.units == Decimal("150")
+    assert holding.cost_basis == Decimal("225")
+
+    blocked = client.delete(f"/api/transactions/{buy.json()['id']}")
+
+    assert blocked.status_code == 400
+    assert "倒序" in blocked.json()["detail"]
+    session.refresh(holding)
+    assert holding.units == Decimal("150")
+    assert holding.cost_basis == Decimal("225")
+    assert session.query(Transaction).filter(Transaction.id == buy.json()["id"]).one().retracted_at is None
+
+    assert client.delete(f"/api/transactions/{sale.json()['id']}").status_code == 200
+    assert client.delete(f"/api/transactions/{buy.json()['id']}").status_code == 200
+    session.refresh(holding)
+    assert holding.units == Decimal("100")
+    assert holding.amount == Decimal("200")
+    assert holding.cost_basis == Decimal("100")
+
+
+def test_transaction_cannot_be_retracted_after_manual_holding_correction(session):
+    client = make_client(session)
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("100"), amount=Decimal("200"), cost_basis=Decimal("100")))
+    session.commit()
+    created = client.post("/api/transactions", json={
+        "asset_code": "519900", "operation": "buy", "trade_date": "2026-01-02",
+        "units": "100", "price": "2", "fee": "0",
+    })
+    holding = session.query(Holding).one()
+    corrected = client.patch(f"/api/holdings/{holding.id}", json={
+        "cost_basis": "250", "correction_reason": "broker reconciliation",
+    })
+    assert created.status_code == 201
+    assert corrected.status_code == 200
+
+    response = client.delete(f"/api/transactions/{created.json()['id']}")
+
+    assert response.status_code == 400
+    assert "手动修正" in response.json()["detail"]
+    assert session.query(Transaction).filter(Transaction.id == created.json()["id"]).one().retracted_at is None
+    session.refresh(holding)
+    assert holding.units == Decimal("200")
+    assert holding.cost_basis == Decimal("250")
+
+
 def test_close_valuation_uses_accumulated_cost_after_added_buy(session):
     session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
                         units=Decimal("100"), amount=Decimal("90"), cost_basis=Decimal("80")))
