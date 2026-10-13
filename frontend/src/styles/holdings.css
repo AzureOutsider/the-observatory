@@ -131,7 +131,7 @@ html[data-theme="dark"] .holdingEditor.holdingDetail { width: min(1100px, 100%);
 .holdingDetailTable th { color: var(--muted); font-size: 15px; }
 .holdingDetailTable th:not(:last-child) { white-space: nowrap; }
 html[data-theme="dark"] .holdingDetailTable :is(th, td) { font-size: 16px; }
-.holdingDetailTable td.numberCell { text-align: right; }
+.holdingDetailTable .numberCell { text-align: right; }
 .holdingDetailTable small { display: block; color: var(--muted); font-size: 14px; line-height: 1.7; margin-top: 5px; }
 .holdingDetailTable td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .holdingDetailReason { min-width: 210px; overflow-wrap: anywhere; white-space: pre-wrap; }

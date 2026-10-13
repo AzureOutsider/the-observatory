@@ -56,7 +56,7 @@ export function HoldingDetail({ holding, onClose }: { holding: Holding; onClose:
           <p className="holdingDetailTotals">已记录 {activeRows.length} 笔有效操作 · 买入支出 {formatMoney(buyTotal)} · 卖出到账 {formatMoney(sellTotal)}（不含撤回记录）</p>
           <div className="holdingDetailTableWrap" tabIndex={0} role="region" aria-label="该标的操作记录，可横向滚动">
             <table className="holdingDetailTable">
-              <thead><tr><th>交易日期</th><th>操作</th><th>价格（元）</th><th>份额</th><th>手续费（元）</th><th>金额（元）</th><th>记录与复盘</th></tr></thead>
+              <thead><tr><th>交易日期</th><th>操作</th><th className="numberCell">价格（元）</th><th className="numberCell">份额</th><th className="numberCell">手续费（元）</th><th className="numberCell">金额（元）</th><th>记录与复盘</th></tr></thead>
               <tbody>{rows.map((row) => <tr key={row.id} className={row.retracted_at ? "holdingDetailRetracted" : ""}>
                 <td>{row.trade_date}</td><td><span className={`holdingDetailOperation ${row.operation}`}>{operationLabels[row.operation] || row.operation}</span>{row.retracted_at && <small>已撤回</small>}</td>
                 <td className="numberCell">{number(row.price, 6)}</td><td className="numberCell">{number(row.units, 2)}</td><td className="numberCell">{number(row.fee, 4)}</td>
