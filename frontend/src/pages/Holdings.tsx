@@ -1,8 +1,9 @@
-import { Pencil, WalletCards } from "lucide-react";
+import { History, Pencil, WalletCards } from "lucide-react";
 import { type CSSProperties, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Holding } from "../api/client";
 import { HoldingEditor } from "../components/HoldingEditor";
+import { HoldingDetail } from "../components/HoldingDetail";
 import { Skeleton } from "../components/ui/skeleton";
 import { useHoldings } from "../hooks/useHoldings";
 import { formatMoney } from "../lib/utils";
@@ -12,6 +13,8 @@ const typeLabels: Record<string, string> = { fund: "基金", stock: "股票", in
 export function Holdings() {
   const { data: rows = [], isLoading, isError, error, refetch } = useHoldings();
   const [editing, setEditing] = useState<Holding | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const detailHolding = rows.find((row) => row.id === detailId);
   const tableWrapRef = useRef<HTMLDivElement>(null);
 
   const summary = useMemo(() => {
@@ -56,30 +59,31 @@ export function Holdings() {
       <div ref={tableWrapRef} className={`holdingsTableWrap ${virtualized ? "virtualTableWrap" : ""}`} tabIndex={0} role="region" aria-label="持仓明细表，可横向滚动查看全部列">
         <table className="holdingsTable">
           <thead><tr><th>标的</th><th>类型</th><th>组合权重</th><th>当前金额</th><th>持有份额</th><th>成本金额</th><th>当前盈亏</th><th aria-label="操作" /></tr></thead>
-          {isLoading ? <tbody><LoadingRows /></tbody> : virtualized ? <tbody className="virtualTableBody" style={{ height: rowVirtualizer.getTotalSize() }}>{rowVirtualizer.getVirtualItems().map((virtualRow) => <HoldingRow key={rows[virtualRow.index].id} row={rows[virtualRow.index]} summaryTotal={summary.total} onEdit={() => setEditing(rows[virtualRow.index])} virtualStyle={{ transform: `translateY(${virtualRow.start}px)` }} measureRef={rowVirtualizer.measureElement} index={virtualRow.index} />)}</tbody> : <tbody>{rows.map((row) => <HoldingRow key={row.id} row={row} summaryTotal={summary.total} onEdit={() => setEditing(row)} />)}</tbody>}
+          {isLoading ? <tbody><LoadingRows /></tbody> : virtualized ? <tbody className="virtualTableBody" style={{ height: rowVirtualizer.getTotalSize() }}>{rowVirtualizer.getVirtualItems().map((virtualRow) => <HoldingRow key={rows[virtualRow.index].id} row={rows[virtualRow.index]} summaryTotal={summary.total} onEdit={() => setEditing(rows[virtualRow.index])} onDetail={() => setDetailId(rows[virtualRow.index].id)} virtualStyle={{ transform: `translateY(${virtualRow.start}px)` }} measureRef={rowVirtualizer.measureElement} index={virtualRow.index} />)}</tbody> : <tbody>{rows.map((row) => <HoldingRow key={row.id} row={row} summaryTotal={summary.total} onEdit={() => setEditing(row)} onDetail={() => setDetailId(row.id)} />)}</tbody>}
         </table>
         {!isLoading && rows.length === 0 && <div className="holdingsEmpty">暂无持仓记录，请先在“操作”页记录或导入持仓。</div>}
       </div>
-      <div className="holdingsFooter">最后读取：{new Date().toLocaleString("zh-CN", { hour12: false })}<span>金额与盈亏可在此页或操作页直接修正</span></div>
+      <div className="holdingsFooter">最后读取：{new Date().toLocaleString("zh-CN", { hour12: false })}<span>修正名称与持仓数据，或打开详情复盘历次操作</span></div>
       {editing && <HoldingEditor holding={editing} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />}
+      {detailHolding && <HoldingDetail holding={detailHolding} onClose={() => setDetailId(null)} />}
     </section>
   );
 }
 
-function HoldingRow({ row, summaryTotal, onEdit, virtualStyle, measureRef, index }: { row: Holding; summaryTotal: number; onEdit: () => void; virtualStyle?: CSSProperties; measureRef?: (element: Element | null) => void; index?: number }) {
+function HoldingRow({ row, summaryTotal, onEdit, onDetail, virtualStyle, measureRef, index }: { row: Holding; summaryTotal: number; onEdit: () => void; onDetail: () => void; virtualStyle?: CSSProperties; measureRef?: (element: Element | null) => void; index?: number }) {
   const amount = Number(row.amount || 0);
   const weight = summaryTotal > 0 ? amount / summaryTotal : 0;
   const profit = row.profit == null ? null : Number(row.profit);
   const style = virtualStyle ? { position: "absolute", top: 0, left: 0, width: "100%", display: "table", tableLayout: "fixed", ...virtualStyle } as CSSProperties : undefined;
   return <tr ref={measureRef} data-index={index} style={style} key={row.id}>
-    <td><div className="holdingIdentity"><strong title={row.asset.name}>{row.asset.name}</strong><small>{row.asset.code}</small><small className="holdingAudit">收盘估值：{formatAuditTime(row.last_valuation_at)} · {row.last_valuation_source || "暂无记录"}</small><small className={`holdingAudit ${row.manual_adjusted ? "manual" : ""}`}>{row.manual_adjusted ? `手动修正：${formatAuditTime(row.last_manual_adjustment_at)}` : "未手动修正"}</small></div></td>
+    <td><div className="holdingIdentity"><strong title={row.asset.custom_name || row.asset.name}>{row.asset.custom_name || row.asset.name}</strong><small>{row.asset.code}</small><small className="holdingAudit">收盘估值：{formatAuditTime(row.last_valuation_at)} · {row.last_valuation_source || "暂无记录"}</small><small className={`holdingAudit ${row.manual_adjusted ? "manual" : ""}`}>{row.manual_adjusted ? `手动修正：${formatAuditTime(row.last_manual_adjustment_at)}` : "未手动修正"}</small></div></td>
     <td><span className="assetTypeBadge">{typeLabels[row.asset.asset_type] ?? row.asset.asset_type}</span></td>
     <td><div className="weightCell"><span>{(weight * 100).toFixed(1)}%</span><i><b style={{ width: `${Math.min(weight * 100, 100)}%` }} /></i></div></td>
     <td className="numberCell">{formatMoney(amount)}</td>
     <td className="numberCell">{row.units == null ? "--" : Number(row.units).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     <td className="numberCell">{row.cost_basis == null ? "--" : formatMoney(Number(row.cost_basis))}</td>
     <td className={`holdingProfit numberCell ${profit == null ? "flatText" : profit >= 0 ? "upText" : "downText"}`}>{profit == null ? "--" : <><strong>{formatMoney(profit)}</strong><small>{formatProfitRate(row, amount, profit)}</small></>}</td>
-    <td><button className="iconButton compactAction" onClick={onEdit} title={`修正${row.asset.name}`}><Pencil size={14} /><span>修正</span></button></td>
+    <td><div className="holdingRowActions"><button className="iconButton compactAction holdingEditButton" onClick={onEdit} title={`修正${row.asset.custom_name || row.asset.name}`}><Pencil size={14} aria-hidden="true" /><span>修正</span></button><button className="iconButton compactAction holdingDetailButton" onClick={onDetail} aria-label={`查看${row.asset.custom_name || row.asset.name}的操作详情`}><History size={14} aria-hidden="true" /><span>详情</span></button></div></td>
   </tr>;
 }
 

@@ -22,6 +22,7 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
     id: i + 1, asset: holdings[i % 4].asset, operation: ['buy', 'sell', 'dividend', 'transfer', 'adjustment', 'note'][i % 6],
     trade_date: '2026-09-10', amount: '123456.78', units: i === 2 ? null : '10000.12', price: i === 2 ? null : '1.2345',
     reason: '根据计划分批调整，保留交易事实与对账信息，等待下一次复盘。',
+    fee: '0.1',
     retracted_at: i === 5 ? '2026-09-10T12:00:00' : null,
     retraction_reason: i === 5 ? '重复录入，已撤回' : null,
     retraction_effect: i === 5 ? '{"amount_before":"123456.78","amount_after":"0"}' : null,
@@ -47,7 +48,18 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       else { state.writes.push({ method: 'DELETE', path }); const row = transactions.find(row => path.endsWith('/' + row.id)); row.retracted_at = '2026-09-10T12:00:00'; result = { status: 'ok', id: row.id }; }
     }
     else if ((holdingsPage || transactionsPage) && path === '/holdings') result = holdings;
-    else if (holdingsPage && /\/holdings\/\d+$/.test(path) && init.method==='PATCH') { const payload=JSON.parse(init.body); state.writes.push(payload); result={...holdings[0],...payload}; }
+    else if (holdingsPage && /\/holdings\/\d+\/transactions$/.test(path)) {
+      state.detailReads = (state.detailReads || 0) + 1;
+      status = state.failDetail ? 503 : 200;
+      const id = Number(path.split('/')[2]);
+      result = state.failDetail ? { detail: '测试详情读取失败' } : state.emptyDetail ? [] : transactions.filter(row => row.asset.id === id);
+    }
+    else if (holdingsPage && /\/holdings\/\d+$/.test(path) && init.method==='PATCH') {
+      const payload=JSON.parse(init.body);
+      status=state.failWrite ? 503 : 200;
+      if(state.failWrite) result={detail:'测试名称保存失败'};
+      else { state.writes.push(payload); const holding=holdings.find(row=>path.endsWith('/'+row.id)); const {custom_name,...fields}=payload; Object.assign(holding,fields); if('custom_name' in payload) holding.asset.custom_name=custom_name; result={...holding}; }
+    }
     else if (newsPage && path === '/frontier-news/tags') result = ['全部', '市场', '人工智能', '银行', '黄金'];
     else if (newsPage && path === '/frontier-news') { result = news; if (url.searchParams.get('refresh') === 'true') state.refreshes.push('news'); }
     else if (path === '/watchlists') result = [{ id: 1, name: '测试列表', items: [] }, { id: 2, name: '第二列表', items: [] }];
@@ -268,13 +280,49 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       await capture('editor');
       await evaluate("document.querySelector('.holdingEditorActions .primaryButton').click()");
       await until("!!document.querySelector('.holdingEditorError')");
-      assert.equal(await evaluate('window.__trendTest.writes.length'),0,'missing reason must not save');
+      assert.equal(await evaluate('window.__trendTest.writes.length'),0,'unchanged form must not save');
+      await evaluate("(() => {const el=document.querySelector('.holdingEditor [name=amount]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'123456.79');el.dispatchEvent(new Event('input',{bubbles:true}));})()");
+      await evaluate("document.querySelector('.holdingEditorActions .primaryButton').click()");
+      await until("document.querySelector('.holdingEditorError').textContent.includes('修正原因')");
+      assert.equal(await evaluate('window.__trendTest.writes.length'),0,'missing correction reason must not save');
       await evaluate("document.querySelector('.holdingEditorReason textarea').focus()");
       await send('Input.insertText',{text:'浏览器测试，仅模拟保存'});
       await evaluate("document.querySelector('.holdingEditorActions .primaryButton').click()");
       await until("!document.querySelector('.holdingEditor')");
       assert.equal(await evaluate('window.__trendTest.writes.length'),1);
-      assert.equal(await evaluate('window.__trendTest.writes[0].amount'),'123456.78');
+      assert.equal(await evaluate('window.__trendTest.writes[0].amount'),'123456.79');
+      await evaluate("document.querySelector('.holdingEditButton').click()");
+      await until("!!document.querySelector('.holdingEditor [name=custom_name]')");
+      await evaluate("(() => {const el=document.querySelector('[name=custom_name]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'示例半导体ETF');el.dispatchEvent(new Event('input',{bubbles:true}));})()");
+      await evaluate("window.__trendTest.failWrite=true;document.querySelector('.holdingEditorActions .primaryButton').click()");
+      await until("!!document.querySelector('.holdingEditorError')");
+      assert.equal(await evaluate("document.querySelector('[name=custom_name]').value"),'示例半导体ETF','failed rename retains input');
+      await evaluate("window.__trendTest.failWrite=false;document.querySelector('.holdingEditorActions .primaryButton').click()");
+      await until("!document.querySelector('.holdingEditor') && document.querySelector('.holdingIdentity strong').textContent==='示例半导体ETF'");
+      assert.deepEqual(await evaluate('window.__trendTest.writes[1]'),{custom_name:'示例半导体ETF'},'name-only save never submits position fields or reason');
+      assert.equal(await evaluate('window.__trendTest.detailReads || 0'),0,'history fetched only when opened');
+      await evaluate("document.querySelector('.holdingDetailButton').focus();document.querySelector('.holdingDetailButton').click()");
+      await until("document.querySelectorAll('.holdingDetailTable tbody tr').length===2");
+      await new Promise(resolve=>setTimeout(resolve,350));
+      assert.equal(await evaluate("document.querySelector('#holding-detail-title').textContent"),'示例半导体ETF');
+      assert(await evaluate("document.querySelector('.holdingDetailTable').textContent.includes('买入') && document.querySelector('.holdingDetailTable').textContent.includes('调整')"),'matching asset operations displayed');
+      assert(await evaluate("document.querySelector('.holdingDetailTable').textContent.includes('2026-09-10') && document.querySelector('.holdingDetailTable').textContent.includes('1.2345')"),'trade date and price displayed');
+      await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',modifiers:8});
+      assert(await evaluate("document.activeElement.classList.contains('holdingDetailTableWrap')"),'shift-tab stays in dialog');
+      await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab'});
+      assert(await evaluate("document.activeElement.classList.contains('modalCloseButton')"),'tab wraps to dialog close button');
+      await capture('detail');
+      await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
+      await until("!document.querySelector('.holdingDetail')");
+      assert(await evaluate("document.activeElement.classList.contains('holdingDetailButton')"),'detail restores focus');
+      await evaluate("window.__trendTest.failDetail=true;document.querySelectorAll('.holdingDetailButton')[1].click()");
+      await until("!!document.querySelector('.holdingDetailError')");
+      await evaluate("window.__trendTest.failDetail=false;document.querySelector('.holdingDetailError button').click()");
+      await until("!!document.querySelector('.holdingDetailRetracted')");
+      assert(await evaluate("document.querySelector('.holdingDetailRetracted').textContent.includes('已撤回')"),'retracted record retained and labeled');
+      await evaluate("document.querySelector('.holdingDetail .modalCloseButton').click(); window.__trendTest.emptyDetail=true;document.querySelectorAll('.holdingDetailButton')[2].click()");
+      await until("!!document.querySelector('.holdingDetail .holdingsEmpty')");
+      await evaluate("document.querySelector('.holdingDetail .modalCloseButton').click();window.__trendTest.emptyDetail=false");
       await send('Emulation.setDeviceMetricsOverride',{width:390,height:1100,deviceScaleFactor:1,mobile:false});
       await evaluate("document.querySelector('.holdingsView').scrollIntoView()");
       await new Promise(resolve=>setTimeout(resolve,250));
@@ -290,7 +338,16 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       assert(await evaluate("(() => {const r=document.querySelector('.holdingEditor').getBoundingClientRect();return r.left>=0 && r.right<=document.documentElement.clientWidth && document.documentElement.scrollWidth<=innerWidth})()"),'mobile editor fits within viewport without page overflow');
       assert(await evaluate("[...document.querySelectorAll('.holdingsMetric strong')].every(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)+1)"),'mobile summary values stay on one line');
       await evaluate("document.querySelector('.holdingEditorActions .iconButton').click()");
-      assert.equal(await evaluate('window.__trendTest.writes.length'),1,'cancel never saves');
+      assert.equal(await evaluate('window.__trendTest.writes.length'),2,'cancel never saves');
+      await evaluate("document.querySelector('.holdingDetailButton').click()");
+      await until("!!document.querySelector('.holdingDetailTable')");
+      await new Promise(resolve=>setTimeout(resolve,350));
+      assert(await evaluate("(() => {const r=document.querySelector('.holdingDetail').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight})()"),'detail fits narrow viewport');
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"),'detail does not overflow page');
+      await capture('mobile-detail');
+      await send('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:1,mobile:false});
+      assert(await evaluate("(() => {const r=document.querySelector('.holdingDetail').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight})()"),'detail fits landscape viewport');
+      await evaluate("document.querySelector('.holdingDetail .modalCloseButton').click()");
       await send('Emulation.setDeviceMetricsOverride',{width:1660,height:1272,deviceScaleFactor:1,mobile:false});
       await evaluate("sessionStorage.setItem('holdings-volume','large')");
       await send('Page.reload');
@@ -302,7 +359,7 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       const overlap=await evaluate(`(() => {const rows=[...document.querySelectorAll('.virtualTableBody tr')].map(r=>r.getBoundingClientRect());return rows.slice(1).some((r,i)=>r.top<rows[i].bottom-1)})()`);
       assert(!overlap,'larger virtual rows do not overlap');
       await columnsAligned();
-      console.log('PASS: holdings typography, columns, correction validation/save/cancel, mobile scrolling, 120-row virtualization; all writes mocked');
+      console.log('PASS: holdings rename/failure, correction validation/save/cancel, asset history/retractions/error/retry/empty/focus, mobile dialogs, columns and 120-row virtualization; all writes mocked');
       await send('Browser.close');
       return;
     }

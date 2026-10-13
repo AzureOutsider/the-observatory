@@ -116,3 +116,32 @@ html[data-theme="dark"] [data-sonner-toast].holdingToast[data-type="error"] [dat
   html[data-theme="dark"] .holdingsView,
   html[data-theme="dark"] .holdingEditorBackdrop { animation: none; }
 }
+
+.holdingRowActions { display: grid; gap: 6px; justify-items: start; }
+.holdingEditor.holdingDetail { width: min(1100px, 100%); }
+html[data-theme="dark"] .holdingEditor.holdingDetail { width: min(1100px, 100%); }
+.holdingDetailSummary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.holdingDetailSummary > div { display: grid; gap: 6px; min-width: 0; }
+.holdingDetailSummary span, .holdingDetailAudit, .holdingDetailTotals { color: var(--muted); font-size: 16px; line-height: 1.7; }
+.holdingDetailSummary strong { font-size: 24px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.holdingDetail h2 { overflow-wrap: anywhere; }
+.holdingDetailTableWrap { overflow: auto; margin-top: 16px; min-width: 0; }
+.holdingDetailTable { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 16px; }
+.holdingDetailTable :is(th, td) { padding: 16px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.holdingDetailTable th { color: var(--muted); font-size: 15px; }
+.holdingDetailTable th:not(:last-child) { white-space: nowrap; }
+html[data-theme="dark"] .holdingDetailTable :is(th, td) { font-size: 16px; }
+.holdingDetailTable td.numberCell { text-align: right; }
+.holdingDetailTable small { display: block; color: var(--muted); font-size: 14px; line-height: 1.7; margin-top: 5px; }
+.holdingDetailTable td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.holdingDetailReason { min-width: 210px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.holdingDetailOperation { font-weight: 600; white-space: nowrap; }
+.holdingDetailOperation.buy { color: var(--green); }
+.holdingDetailOperation.sell { color: var(--red); }
+.holdingDetailRetracted { background: color-mix(in srgb, var(--muted) 8%, transparent); }
+.holdingDetailError { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.holdingDetail :is(button, [tabindex="0"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 560px) {
+  .holdingDetailSummary { grid-template-columns: 1fr; }
+  .holdingDetailSummary strong { font-size: 22px; }
+}

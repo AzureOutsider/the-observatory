@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Holding } from "../api/client";
-import { useUpdateHolding } from "../hooks/useHoldings";
+import { HoldingUpdatePayload, useUpdateHolding } from "../hooks/useHoldings";
 
 type Props = {
   holding: Holding;
@@ -12,6 +12,7 @@ type Props = {
 };
 
 export function HoldingEditor({ holding, onClose, onSaved }: Props) {
+  const [customName, setCustomName] = useState(holding.asset.custom_name ?? holding.asset.name);
   const [amount, setAmount] = useState(holding.amount);
   const [profit, setProfit] = useState(holding.profit ?? "");
   const [units, setUnits] = useState(holding.units ?? "");
@@ -20,6 +21,7 @@ export function HoldingEditor({ holding, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const updateHolding = useUpdateHolding();
   const saving = updateHolding.isPending;
+  const snapshotChanged = amount !== holding.amount || profit !== (holding.profit ?? "") || units !== (holding.units ?? "") || costBasis !== (holding.cost_basis ?? "");
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -35,21 +37,26 @@ export function HoldingEditor({ holding, onClose, onSaved }: Props) {
       setError("请填写当前金额");
       return;
     }
-    if (!correctionReason.trim()) {
+    if (snapshotChanged && !correctionReason.trim()) {
       setError("请填写本次修正原因，便于后续追溯");
       return;
     }
     setError(null);
+    const payload: HoldingUpdatePayload = {};
+    if (customName.trim() !== (holding.asset.custom_name ?? holding.asset.name)) payload.custom_name = customName.trim() || null;
+    if (amount !== holding.amount) payload.amount = amount.trim();
+    if (profit !== (holding.profit ?? "")) payload.profit = profit.trim() || null;
+    if (units !== (holding.units ?? "")) payload.units = units.trim() || null;
+    if (costBasis !== (holding.cost_basis ?? "")) payload.cost_basis = costBasis.trim() || null;
+    if (snapshotChanged) payload.correction_reason = correctionReason.trim();
+    if (Object.keys(payload).length === 0) {
+      setError("请先修改名称或持仓数据");
+      return;
+    }
     try {
       const updated = await updateHolding.mutateAsync({
         id: holding.id,
-        payload: {
-          amount: amount.trim(),
-          profit: profit.trim() ? profit.trim() : null,
-          units: units.trim() ? units.trim() : null,
-          cost_basis: costBasis.trim() ? costBasis.trim() : null,
-          correction_reason: correctionReason.trim(),
-        },
+        payload,
       });
       onSaved(updated);
       toast.success("持仓修正已保存", { className: "holdingToast" });
@@ -70,19 +77,20 @@ export function HoldingEditor({ holding, onClose, onSaved }: Props) {
           <div>
             <span className="kicker">POSITION CORRECTION</span>
             <h2 id="holding-editor-title">修正当前持仓</h2>
-            <p>{holding.asset.name} · {holding.asset.code}</p>
+            <p>{holding.asset.custom_name || holding.asset.name} · {holding.asset.code}</p>
           </div>
           <button className="modalCloseButton" type="button" onClick={onClose} disabled={saving} aria-label="关闭">
             <X size={17} />
           </button>
         </div>
-        <div className="holdingEditorNotice">这里只更新当前持仓快照，不会新增买入、卖出或其他交易流水。</div>
+        <div className="holdingEditorNotice">可修改显示名称；留空恢复行情名称。只改名称不会改变持仓成本。修正金额、份额等数据时请填写原因，不会新增交易流水。</div>
         <div className="holdingEditorGrid">
-          <label><span>当前金额（必填）</span><input value={amount} onChange={(event) => setAmount(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" autoFocus /></label>
+          <label className="holdingEditorReason"><span>标的名称</span><input name="custom_name" value={customName} onChange={(event) => setCustomName(event.target.value)} maxLength={255} placeholder={holding.asset.name} autoFocus /></label>
+          <label><span>当前金额（必填）</span><input name="amount" value={amount} onChange={(event) => setAmount(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" /></label>
           <label><span>当前盈亏</span><input value={profit} onChange={(event) => setProfit(event.target.value)} type="number" step="0.01" inputMode="decimal" placeholder="可留空" /></label>
           <label><span>持有份额</span><input value={units} onChange={(event) => setUnits(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="最多两位小数，可留空" /></label>
           <label><span>成本金额</span><input value={costBasis} onChange={(event) => setCostBasis(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="可留空" /></label>
-          <label className="holdingEditorReason"><span>本次修正原因（必填）</span><textarea value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} maxLength={500} placeholder="例如：已与支付宝持仓对账" /></label>
+          <label className="holdingEditorReason"><span>本次修正原因{snapshotChanged ? "（必填）" : "（修改持仓数据时必填）"}</span><textarea value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} maxLength={500} placeholder="例如：已与支付宝持仓对账" /></label>
         </div>
         {error && <div className="notice holdingEditorError">{error}</div>}
         <div className="holdingEditorActions">

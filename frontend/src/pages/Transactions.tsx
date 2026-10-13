@@ -115,7 +115,7 @@ export function Transactions() {
         <section className="panel correctionPanel wide">
           <div className="sectionHeader"><div><h2>持仓修正</h2></div><span>对账后快速更新</span></div>
           <div className="correctionList">
-            {holdings.length > 0 ? holdings.map((holding) => <div className="correctionRow" key={holding.id}><div className="correctionIdentity"><strong title={holding.asset.name}>{holding.asset.name}</strong><small>{holding.asset.code} · 当前金额 ¥{Number(holding.amount).toFixed(2)}</small></div><button className="iconButton compactAction" type="button" onClick={() => setEditing(holding)} title={`修正${holding.asset.name}`}><Pencil size={14} /><span>编辑</span></button></div>) : <div className="observatoryEmpty">暂无持仓可修正</div>}
+            {holdings.length > 0 ? holdings.map((holding) => <div className="correctionRow" key={holding.id}><div className="correctionIdentity"><strong title={(holding.asset.custom_name || holding.asset.name)}>{(holding.asset.custom_name || holding.asset.name)}</strong><small>{holding.asset.code} · 当前金额 ¥{Number(holding.amount).toFixed(2)}</small></div><button className="iconButton compactAction" type="button" onClick={() => setEditing(holding)} title={`修正${(holding.asset.custom_name || holding.asset.name)}`}><Pencil size={14} /><span>编辑</span></button></div>) : <div className="observatoryEmpty">暂无持仓可修正</div>}
           </div>
           <p className="panelFootnote">修正只影响当前持仓数据，不会改变操作流水。</p>
         </section>
@@ -154,12 +154,12 @@ function TransactionRow({ row, onRetract, disabled, deleting, virtualStyle, meas
   const style = virtualStyle ? { position: "absolute", top: 0, left: 0, width: "100%", display: "table", tableLayout: "fixed", ...virtualStyle } as CSSProperties : undefined;
   return <tr className={row.retracted_at ? "retractedTransaction" : undefined} ref={measureRef} data-index={index} style={style}>
     <td>{row.trade_date}</td>
-    <td><strong>{row.asset.name}</strong><small>{row.asset.code}</small></td>
+    <td><strong>{(row.asset.custom_name || row.asset.name)}</strong><small>{row.asset.code}</small></td>
     <td><span className={`operationBadge ${operationLabels[row.operation] ? row.operation : ""}`}>{operationLabels[row.operation] ?? row.operation}</span></td>
     <td className="numberCell">¥{Number(row.amount).toFixed(2)}</td>
     <td className="mutedCell">{row.units == null ? "--" : Number(row.units).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{row.price == null ? "" : ` · ¥${Number(row.price).toFixed(4)}`}</td>
     <td className="reasonCell">{row.retracted_at ? <><span className="retractedBadge">已撤回</span><small>撤回于 {formatAuditTime(row.retracted_at)}</small><small>{row.retraction_reason || "用户手动撤回"}</small><small>{formatRetractionEffect(row.retraction_effect)}</small></> : row.reason || "--"}</td>
-    <td>{row.retracted_at ? <span className="retractedLabel">不可再次撤回</span> : <button className="retractButton" type="button" onClick={onRetract} disabled={disabled} title={`撤回${row.asset.name}这条流水`}><Trash2 size={14} /><span>{deleting ? "撤回中" : "撤回"}</span></button>}</td>
+    <td>{row.retracted_at ? <span className="retractedLabel">不可再次撤回</span> : <button className="retractButton" type="button" onClick={onRetract} disabled={disabled} title={`撤回${(row.asset.custom_name || row.asset.name)}这条流水`}><Trash2 size={14} /><span>{deleting ? "撤回中" : "撤回"}</span></button>}</td>
   </tr>;
 }
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db import get_session
 from app.models import Holding, Transaction
-from app.schemas import HoldingRead, HoldingUpdate, ImportHoldingsRequest, ImportHoldingsResponse
+from app.schemas import HoldingRead, HoldingUpdate, ImportHoldingsRequest, ImportHoldingsResponse, TransactionRead
 from app.services.importer import import_holdings_file
 
 router = APIRouter(tags=["holdings"])
@@ -20,6 +20,20 @@ def list_holdings(session: Session = Depends(get_session)):
         session.query(Holding)
         .options(joinedload(Holding.asset))
         .order_by(Holding.amount.desc())
+        .all()
+    )
+
+
+@router.get("/holdings/{holding_id}/transactions", response_model=list[TransactionRead])
+def holding_transactions(holding_id: int, session: Session = Depends(get_session)):
+    holding = session.get(Holding, holding_id)
+    if holding is None:
+        raise HTTPException(status_code=404, detail="持仓不存在")
+    return (
+        session.query(Transaction)
+        .options(joinedload(Transaction.asset))
+        .filter(Transaction.asset_id == holding.asset_id)
+        .order_by(Transaction.trade_date.desc(), Transaction.id.desc())
         .all()
     )
 
@@ -113,13 +127,17 @@ def update_holding(holding_id: int, payload: HoldingUpdate, session: Session = D
     correction_reason = updates.pop("correction_reason", None)
     if not updates:
         raise HTTPException(status_code=400, detail="至少填写一个需要修正的字段")
+    if "custom_name" in updates:
+        name = updates.pop("custom_name")
+        holding.asset.custom_name = name.strip() if name and name.strip() else None
     for field, value in updates.items():
         if value is not None and hasattr(value, "is_finite") and not value.is_finite():
             raise HTTPException(status_code=422, detail=f"{field} 必须是有限数字")
         setattr(holding, field, value)
-    holding.last_manual_adjustment_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    holding.last_manual_adjustment_reason = (correction_reason or "").strip() or "未注明修正原因"
-    holding.last_update_type = "manual_correction"
+    if updates:
+        holding.last_manual_adjustment_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        holding.last_manual_adjustment_reason = (correction_reason or "").strip() or "未注明修正原因"
+        holding.last_update_type = "manual_correction"
 
     session.commit()
     session.refresh(holding)

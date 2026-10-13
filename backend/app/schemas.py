@@ -9,6 +9,7 @@ class AssetRead(BaseModel):
     id: int
     code: str
     name: str
+    custom_name: Optional[str] = None
     asset_type: str
     market: Optional[str] = None
     theme: Optional[str] = None
@@ -36,6 +37,7 @@ class HoldingRead(BaseModel):
 class HoldingUpdate(BaseModel):
     """Fields that can be corrected when the broker statement has changed."""
 
+    custom_name: Optional[str] = Field(default=None, max_length=255)
     amount: Optional[Decimal] = Field(default=None, ge=0)
     units: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
     cost_basis: Optional[Decimal] = Field(default=None, ge=0)
