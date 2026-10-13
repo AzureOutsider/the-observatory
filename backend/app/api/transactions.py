@@ -29,7 +29,9 @@ def _calculated_amount(payload: TransactionCreate) -> Decimal:
     if payload.operation == "note":
         return Decimal("0.0000")
     if payload.units is not None and payload.price is not None:
-        return _money(_money(payload.units, "0.000000") * _money(payload.price, "0.000000") + _money(payload.fee))
+        gross_amount = _money(payload.units, "0.000000") * _money(payload.price, "0.000000")
+        fee = _money(payload.fee)
+        return _money(gross_amount - fee if payload.operation == "sell" else gross_amount + fee)
     # Retain the old amount-only API for existing integrations. The web form
     # supplies shares and price, and any caller-supplied amount is ignored there.
     return _money(payload.amount)

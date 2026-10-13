@@ -32,7 +32,7 @@ export function Transactions() {
   const [price, setPrice] = useState("");
   const [fee, setFee] = useState("0.1");
   const isNote = operation === "note";
-  const calculatedAmount = Number(units) * Number(price) + Number(fee || "0");
+  const calculatedAmount = Number(units) * Number(price) + (operation === "sell" ? -1 : 1) * Number(fee || "0");
   const amountPreview = isNote ? "0.00" : units && price && Number.isFinite(calculatedAmount) ? calculatedAmount.toFixed(2) : "--";
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const virtualized = rows.length > 100;
@@ -101,7 +101,7 @@ export function Transactions() {
             <label><span>份额 <small>{isNote ? "选填" : "必填"} · 最多两位小数</small></span><input name="units" type="number" min="0" step="0.01" placeholder="0.00" value={units} onChange={(event) => setUnits(event.target.value)} required={!isNote} /></label>
             <label><span>价格（元） <small>{isNote ? "选填" : "必填"}</small></span><input name="price" type="number" min="0" step="0.000001" placeholder="0.000000" value={price} onChange={(event) => setPrice(event.target.value)} required={!isNote} /></label>
             <label><span>手续费（元） <small>默认 0.10</small></span><input name="fee" type="number" min="0" step="0.01" value={isNote ? "0" : fee} onChange={(event) => setFee(event.target.value)} disabled={isNote} /></label>
-            <div className="transactionAmountPreview"><span>自动计算金额（元）</span><output aria-label="自动计算金额" aria-live="polite">¥{amountPreview}</output><small>{isNote ? "备注不影响金额和持仓" : "份额 × 价格 + 手续费"}</small></div>
+            <div className="transactionAmountPreview"><span>自动计算金额（元）</span><output aria-label="自动计算金额" aria-live="polite">¥{amountPreview}</output><small>{isNote ? "备注不影响金额和持仓" : operation === "sell" ? "份额 × 价格 − 手续费" : "份额 × 价格 + 手续费"}</small></div>
             <label className="transactionReasonField"><span>记录与复盘 <small>选填</small></span><textarea name="reason" placeholder="记录这次操作的理由、相关信息或交易纪律" /></label>
           </div>
           <button className="primaryButton" type="submit" disabled={createTransaction.isPending}><Repeat2 size={15} />{createTransaction.isPending ? "记录中…" : "记录操作"}</button>

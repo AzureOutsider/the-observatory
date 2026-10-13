@@ -163,6 +163,18 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       assert.equal(await evaluate("document.querySelector('[name=fee]').value"), '0.1', 'default fee');
       await evaluate(`Object.entries({asset_code:'000001',asset_name:'测试基金',asset_type:'fund',operation:'buy',trade_date:'2026-09-10',units:'10.12',price:'1.234567',fee:'0.10',reason:'浏览器测试，不写真实数据'}).forEach(([key,value])=>{const el=document.querySelector('.formPanel [name="'+key+'"]'); const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));})`);
       await until("document.querySelector('.transactionAmountPreview output').textContent==='¥12.59'");
+      const setTradeField = async (name, value) => evaluate(`(() => { const el=document.querySelector('.formPanel [name="${name}"]'); const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto,'value').set.call(el,'${value}'); el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true})); })()`);
+      await setTradeField('operation', 'sell');
+      await until("document.querySelector('.transactionAmountPreview output').textContent==='¥12.39'");
+      assert.equal(await evaluate("document.querySelector('.transactionAmountPreview small').textContent"), '份额 × 价格 − 手续费');
+      await setTradeField('fee', '0.25');
+      await until("document.querySelector('.transactionAmountPreview output').textContent==='¥12.24'");
+      await setTradeField('fee', '0');
+      await until("document.querySelector('.transactionAmountPreview output').textContent==='¥12.49'");
+      await setTradeField('operation', 'buy');
+      await setTradeField('fee', '0.10');
+      await until("document.querySelector('.transactionAmountPreview output').textContent==='¥12.59'");
+      assert.equal(await evaluate("document.querySelector('.transactionAmountPreview small').textContent"), '份额 × 价格 + 手续费');
       await evaluate("window.__trendTest.failWrite=true; document.querySelector('.formPanel').requestSubmit()");
       await until("!!document.querySelector('.transactionToast[data-type=error]')");
       assert.equal(await evaluate("document.querySelector('[name=units]').value"), '10.12', 'failed submission retains input');
@@ -192,6 +204,16 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       await until("!!document.querySelector('.holdingEditor')");
       assert(await evaluate("document.querySelector('.holdingEditor').getBoundingClientRect().top>=0"), 'correction editor opens from transactions');
       await evaluate("document.querySelector('.holdingEditorActions .iconButton').click()");
+      await setTradeField('asset_code', '000001');
+      await setTradeField('operation', 'sell');
+      await setTradeField('units', '300');
+      await setTradeField('price', '1.462');
+      await until("document.querySelector('.transactionAmountPreview output').textContent==='¥438.50'");
+      await evaluate("document.querySelector('.formPanel').requestSubmit()");
+      await until("window.__trendTest.writes.length===3 && !document.querySelector('.formPanel button').disabled");
+      assert.equal(await evaluate('window.__trendTest.writes[2].payload.operation'), 'sell');
+      assert.equal(await evaluate('window.__trendTest.writes[2].payload.fee'), '0.1');
+      assert.equal(await evaluate("document.querySelector('[name=operation]').value"), 'buy', 'sell submission resets operation');
       for (const [width,height] of [[375,900],[844,390]]) {
         await send('Emulation.setDeviceMetricsOverride', { width,height,deviceScaleFactor:1,mobile:false });
         await evaluate("document.querySelector('.formPanel').scrollIntoView()");

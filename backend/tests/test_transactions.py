@@ -171,6 +171,34 @@ def test_amount_is_calculated_even_if_caller_sends_incorrect_amount(session):
     assert Decimal(response.json()["amount"]) == Decimal("12.5938")
 
 
+@pytest.mark.parametrize("fee,expected_amount", [(None, "438.5000"), ("0.25", "438.3500"), ("0", "438.6000")])
+def test_sell_deducts_fee_from_proceeds_and_retraction_restores_holding(session, fee, expected_amount):
+    client = make_client(session)
+    session.add(Holding(asset=Asset(code="519900", name="Example ETF", asset_type="fund"),
+                        units=Decimal("400"), amount=Decimal("584.6"), cost_basis=Decimal("400")))
+    session.commit()
+    payload = {
+        "asset_code": "519900", "operation": "sell", "trade_date": "2026-01-03",
+        "units": "300", "price": "1.462", "amount": "9999",
+    }
+    if fee is not None:
+        payload["fee"] = fee
+
+    response = client.post("/api/transactions", json=payload)
+
+    assert response.status_code == 201
+    assert Decimal(response.json()["amount"]) == Decimal(expected_amount)
+    assert Decimal(response.json()["fee"]) == Decimal("0.1" if fee is None else fee)
+    holding = session.query(Holding).one()
+    assert holding.units == Decimal("100")
+    assert holding.cost_basis == Decimal("100")
+    assert client.delete(f"/api/transactions/{response.json()['id']}").status_code == 200
+    session.refresh(holding)
+    assert holding.units == Decimal("400")
+    assert holding.amount == Decimal("584.6")
+    assert holding.cost_basis == Decimal("400")
+
+
 def test_trade_from_operation_form_succeeds_without_amount(session):
     response = make_client(session).post("/api/transactions", json={
         "asset_code": "588080", "asset_type": "fund", "operation": "buy",
