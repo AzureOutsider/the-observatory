@@ -135,3 +135,22 @@ def test_fetch_fund_estimate_backfills_name_when_intraday_source_omits_it(monkey
 
     assert result["name"] == "国泰中证白酒指数A"
     assert result["source"] == "sina_xincai_estimate"
+
+
+def test_fetch_fund_estimate_can_skip_global_source_health_for_isolated_paper_refresh(monkeypatch):
+    recorded = []
+    monkeypatch.setattr(market, "_record_source_result", lambda *args: recorded.append(args))
+    monkeypatch.setattr(market, "_fetch_xincai_fund_estimate", lambda code: {
+        "ok": False, "code": code, "error": "intraday unavailable",
+    })
+    monkeypatch.setattr(market, "_fetch_tencent_fund_quote", lambda code: {
+        "ok": False, "code": code, "error": "secondary unavailable",
+    })
+    monkeypatch.setattr(market, "_fetch_eastmoney_official_nav", lambda code: {
+        "ok": True, "code": code, "nav": 1.2, "source": "eastmoney_official_nav",
+    })
+
+    result = market.fetch_fund_estimate("999102", record_health=False)
+
+    assert result["ok"] is True
+    assert recorded == []

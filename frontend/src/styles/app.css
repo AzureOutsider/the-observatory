@@ -915,7 +915,7 @@ textarea {
   }
 
   .nav {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   .navButton {
@@ -1362,6 +1362,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); outline
 }
 
 @media (max-width: 560px) {
+  .nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .mainPanel { padding: 13px 10px 30px; }
   .topbar { margin-bottom: 15px; }
   .topbar h1 { font-size: 24px; }
@@ -1935,6 +1936,10 @@ html[data-theme="dark"] a:focus-visible { outline: 2px solid var(--obs-brass-bri
   html[data-theme="dark"] .navButton { justify-content: center; min-height: 48px; padding: 0 6px; }
   html[data-theme="dark"] .mainPanel { padding: 24px 18px 42px; }
   html[data-theme="dark"] .observatoryView { min-height: auto; }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  html[data-theme="dark"] .nav { grid-template-columns: repeat(8, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {

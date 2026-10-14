@@ -3,10 +3,11 @@ import { apiGet, apiPatch, Holding, Transaction } from "../api/client";
 
 export const holdingsQueryKey = ["holdings"] as const;
 
-export function useHoldings() {
+export function useHoldings(enabled = true) {
   return useQuery({
     queryKey: holdingsQueryKey,
     queryFn: ({ signal }) => apiGet<Holding[]>("/holdings", { signal }),
+    enabled,
     staleTime: 1000 * 60 * 2,
   });
 }

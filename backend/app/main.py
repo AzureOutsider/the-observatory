@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agent, holdings, knowledge, market, system, transactions, watchlists
+from app.api import agent, holdings, knowledge, market, paper_trading, system, transactions, watchlists
 from app.config import settings
 from app.db import SessionLocal, init_db
 from app.observability import RequestMetricsMiddleware
@@ -83,6 +83,7 @@ def create_app() -> FastAPI:
 
     app.include_router(holdings.router, prefix="/api")
     app.include_router(transactions.router, prefix="/api")
+    app.include_router(paper_trading.router, prefix="/api")
     app.include_router(watchlists.router, prefix="/api")
     app.include_router(market.router, prefix="/api")
     app.include_router(knowledge.router, prefix="/api")

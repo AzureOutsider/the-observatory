@@ -55,6 +55,65 @@ export type Transaction = {
   retraction_effect?: string | null;
 };
 
+export type PaperPosition = {
+  id: number;
+  code: string;
+  name: string;
+  asset_type: "fund" | "stock";
+  units: string;
+  cost_basis: string;
+  realized_profit: string;
+  market_price?: string | null;
+  market_value?: string | null;
+  unrealized_profit?: string | null;
+  total_profit?: string | null;
+  quote_status: string;
+  quote_message?: string | null;
+  quote_source?: string | null;
+  quote_time?: string | null;
+  trade_count: number;
+  is_open: boolean;
+};
+
+export type PaperTrade = {
+  id: number;
+  asset_id: number;
+  operation: "buy" | "sell";
+  trade_date: string;
+  amount: string;
+  units: string;
+  price: string;
+  fee: string;
+  reason?: string | null;
+  created_at: string;
+  retracted_at?: string | null;
+  retraction_reason?: string | null;
+};
+
+export type PaperQuote = {
+  id: number;
+  captured_at: string;
+  price: string;
+  change_pct?: string | null;
+  quote_status: string;
+  quote_time?: string | null;
+  source?: string | null;
+  message?: string | null;
+};
+
+export type PaperTradeCreate = {
+  idempotency_key: string;
+  asset_code: string;
+  asset_name: string;
+  asset_type: "fund" | "stock";
+  operation: "buy" | "sell";
+  trade_date: string;
+  units: string;
+  price: string;
+  fee: string;
+  reason?: string;
+};
+
 export type MarketIndex = {
   ok: boolean;
   code: string;

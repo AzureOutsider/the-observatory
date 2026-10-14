@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `backend/app/api/` | FastAPI 路由与请求边界 | 跟踪 |
 | `backend/app/services/` | 行情、新闻、持仓估值和 Agent 分析逻辑 | 跟踪 |
+| `backend/app/api/paper_trading.py`、`backend/app/models.py` 中的 `Paper*` 表 | 模拟盘专属交易、标的和行情快照；不复用真实资产、持仓或流水表 | 跟踪 |
 | `backend/tests/`、`backend/scripts/` | 后端测试和维护脚本 | 跟踪 |
 | `backend/data/` | SQLite、知识库、复盘和私人标签配置 | 忽略整个目录 |
 | `backend/tag_overrides.example.json` | 私人标签配置格式示例 | 跟踪 |

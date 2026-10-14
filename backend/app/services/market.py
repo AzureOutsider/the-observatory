@@ -16,25 +16,29 @@ HEADERS = {
 }
 
 
-def fetch_fund_estimate(code: str) -> dict[str, Any]:
+def fetch_fund_estimate(code: str, *, record_health: bool = True) -> dict[str, Any]:
     estimate = _fetch_xincai_fund_estimate(code)
-    _record_source_result("sina_xincai_estimate", estimate)
+    if record_health:
+        _record_source_result("sina_xincai_estimate", estimate)
     if estimate.get("ok"):
         if not estimate.get("name"):
             metadata = _fetch_tencent_fund_quote(code)
-            _record_source_result("tencent_fund_quote", metadata)
+            if record_health:
+                _record_source_result("tencent_fund_quote", metadata)
             if metadata.get("name"):
                 estimate["name"] = metadata["name"]
         return estimate
 
     secondary = _fetch_tencent_fund_quote(code)
-    _record_source_result("tencent_fund_quote", secondary)
+    if record_health:
+        _record_source_result("tencent_fund_quote", secondary)
     if secondary.get("ok"):
         secondary["warnings"] = [str(estimate.get("error") or "intraday estimate unavailable")]
         return secondary
 
     fallback = _fetch_eastmoney_official_nav(code)
-    _record_source_result("eastmoney_official_nav", fallback)
+    if record_health:
+        _record_source_result("eastmoney_official_nav", fallback)
     if fallback.get("ok"):
         fallback["warnings"] = [
             str(estimate.get("error") or "intraday estimate unavailable"),

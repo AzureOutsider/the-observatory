@@ -89,6 +89,57 @@ class Transaction(TimestampMixin, Base):
     asset: Mapped[Asset] = relationship(back_populates="transactions")
 
 
+class PaperAsset(TimestampMixin, Base):
+    """An asset tracked only in the paper portfolio; deliberately separate from Asset."""
+
+    __tablename__ = "paper_assets"
+    __table_args__ = (UniqueConstraint("code", "asset_type", name="uq_paper_asset_code_type"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(32), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    asset_type: Mapped[str] = mapped_column(String(32))
+
+    trades: Mapped[list["PaperTrade"]] = relationship(
+        back_populates="asset", cascade="all, delete-orphan"
+    )
+
+
+class PaperTrade(TimestampMixin, Base):
+    __tablename__ = "paper_trades"
+    __table_args__ = (Index("uq_paper_trades_idempotency_key", "idempotency_key", unique=True),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("paper_assets.id"), index=True)
+    operation: Mapped[str] = mapped_column(String(8))
+    trade_date: Mapped[date] = mapped_column(Date, index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
+    units: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    fee: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=0)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    retracted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
+    retraction_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+
+    asset: Mapped[PaperAsset] = relationship(back_populates="trades")
+
+
+class PaperPriceSnapshot(Base):
+    __tablename__ = "paper_price_snapshots"
+    __table_args__ = (Index("ix_paper_price_snapshots_asset_captured", "asset_id", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("paper_assets.id"), index=True)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    change_pct: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4), nullable=True)
+    quote_status: Mapped[str] = mapped_column(String(32))
+    quote_time: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    source: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
 class Watchlist(TimestampMixin, Base):
     __tablename__ = "watchlists"
 

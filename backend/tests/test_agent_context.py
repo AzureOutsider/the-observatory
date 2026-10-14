@@ -4,7 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from app.config import settings
-from app.models import Asset, Holding, KnowledgeChunk, PriceSnapshot, Transaction
+from app.models import Asset, Holding, KnowledgeChunk, PaperAsset, PaperTrade, PriceSnapshot, Transaction
 from app.services import agent_context
 from app.services.agent_context import append_review_markdown, build_today_context, build_research_context
 
@@ -122,6 +122,35 @@ def test_build_research_context_requires_external_authoritative_research(session
     assert "authoritative sources" in package["agent_prompt"]
     assert "Never describe official NAV" in package["agent_prompt"]
     assert any("official NAV" in rule for rule in package["analysis_contract"]["guardrails"])
+
+
+def test_agent_analysis_excludes_isolated_paper_positions_and_trades(session, monkeypatch):
+    asset = Asset(code="999101", name="Real test asset", asset_type="fund")
+    session.add(Holding(asset=asset, amount=Decimal("500"), units=Decimal("100"), cost_basis=Decimal("400")))
+    paper_asset = PaperAsset(code="999101", name="Paper test idea", asset_type="fund")
+    session.add(PaperTrade(
+        asset=paper_asset,
+        operation="buy",
+        trade_date=date(2026, 10, 14),
+        amount=Decimal("999999.1000"),
+        units=Decimal("500000"),
+        price=Decimal("2"),
+        fee=Decimal("0.1"),
+        reason="PRIVATE PAPER THESIS MUST NOT ENTER AGENT CONTEXT",
+    ))
+    session.commit()
+    monkeypatch.setattr("app.services.agent_context.fetch_market_indices", lambda: [])
+    monkeypatch.setattr("app.services.agent_context.fetch_frontier_news", lambda limit, session: [])
+    monkeypatch.setattr("app.services.agent_context.get_holding_fund_trends", lambda session: [])
+
+    package = build_research_context(session)
+
+    portfolio = package["private_portfolio"]
+    assert [row["code"] for row in portfolio["holdings"]] == ["999101"]
+    assert portfolio["holdings"][0]["name"] == "Real test asset"
+    assert portfolio["recent_transactions"] == []
+    assert "PRIVATE PAPER THESIS MUST NOT ENTER AGENT CONTEXT" not in str(package)
+    assert not any("paper" in key.lower() for key in package)
 
 
 def test_research_context_includes_review_continuity(tmp_path, monkeypatch, session):

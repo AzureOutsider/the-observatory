@@ -51,6 +51,7 @@ def init_db() -> None:
             "retraction_reason": "TEXT",
             "retraction_effect": "TEXT",
         },
+        "paper_trades": {"idempotency_key": "VARCHAR(36)"},
         "news_items": {
             "summary": "TEXT",
             "fetched_at": "DATETIME",
@@ -79,6 +80,12 @@ def init_db() -> None:
             text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_news_items_content_hash "
                 "ON news_items (content_hash)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_paper_trades_idempotency_key "
+                "ON paper_trades (idempotency_key)"
             )
         )
 

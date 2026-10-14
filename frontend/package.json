@@ -14,6 +14,7 @@
     "test:frontier": "node scripts/check-manual-refresh.cjs --frontier",
     "test:holdings": "node scripts/check-manual-refresh.cjs --holdings",
     "test:transactions": "node scripts/check-manual-refresh.cjs --transactions",
+    "test:paper": "node scripts/check-manual-refresh.cjs --paper",
     "test:agent": "node scripts/check-manual-refresh.cjs --agent",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",

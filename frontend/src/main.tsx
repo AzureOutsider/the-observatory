@@ -10,6 +10,7 @@ import "./styles/tracking-detail.css";
 import "./styles/frontier-news.css";
 import "./styles/holdings.css";
 import "./styles/transactions.css";
+import "./styles/paper-trading.css";
 import "./styles/agent.css";
 
 const queryClient = new QueryClient({

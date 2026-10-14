@@ -7,7 +7,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const assert = require('node:assert/strict');
 
-function installFixtures(longPage = false, newsPage = false, holdingsPage = false, transactionsPage = false) {
+function installFixtures(longPage = false, newsPage = false, holdingsPage = false, transactionsPage = false, paperPage = false) {
   const point = { time: '2026-09-10T11:30:00', price: 1.23, change_pct: 1, source: 'test' };
   const makeRow = id => ({ watchlist_item_id: id, name: `测试基金${id}`, code: String(id).padStart(6, '0'), asset_type: 'fund', tags: id === 1 ? ['重点'] : [], points: [point], latest: point, quote_status: 'intraday_estimate' });
   const rows = Array.from({ length: longPage ? 35 : 8 }, (_, i) => makeRow(i + 1));
@@ -27,6 +27,17 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
     retraction_reason: i === 5 ? '重复录入，已撤回' : null,
     retraction_effect: i === 5 ? '{"amount_before":"123456.78","amount_after":"0"}' : null,
   }));
+  const paperPositions = [
+    { id: 41, code: '999001', name: '模拟测试标的', asset_type: 'fund', units: '1000', cost_basis: '1200.1000', realized_profit: '0.0000', market_price: '1.5000', market_value: '1500.0000', unrealized_profit: '299.9000', total_profit: '299.9000', quote_status: 'intraday_estimate', quote_message: '模拟行情，仅作参考', quote_source: 'test', quote_time: '2026-10-14 11:30:00', trade_count: 1, is_open: true },
+    { id: 42, code: '600000', name: '已结束的模拟想法', asset_type: 'stock', units: '0.000000', cost_basis: '0.0000', realized_profit: '-20.1000', quote_status: 'closed', trade_count: 2, is_open: false },
+  ];
+  const paperTrades = [
+    { id: 51, asset_id: 41, operation: 'buy', trade_date: '2026-10-14', amount: '1200.1000', units: '1000.000000', price: '1.200000', fee: '0.1000', reason: '浏览器测试：观察行业周期与估值', created_at: '2026-10-14T10:00:00', retracted_at: null, retraction_reason: null },
+    { id: 61, asset_id: 42, operation: 'buy', trade_date: '2026-10-13', amount: '20.1000', units: '10.000000', price: '2.000000', fee: '0.1000', reason: 'test', created_at: '2026-10-13T10:00:00', retracted_at: null, retraction_reason: null },
+    { id: 62, asset_id: 42, operation: 'sell', trade_date: '2026-10-14', amount: '0.0000', units: '10.000000', price: '2.010000', fee: '0.1000', reason: 'test', created_at: '2026-10-14T10:00:00', retracted_at: null, retraction_reason: null },
+  ];
+  const paperQuotes = [{ id: 71, asset_id: 41, captured_at: '2026-10-14T03:30:00', price: '1.500000', change_pct: '1.25', quote_status: 'intraday_estimate', quote_time: '2026-10-14 11:30:00', source: 'test', message: 'mock quote' }];
+  window.__paperFixture = { positions: paperPositions, trades: paperTrades, quotes: paperQuotes, reads: [], realReads: [], writes: [], refreshes: [], failWrite: false };
   const originalFetch = window.fetch;
   window.fetch = async (input, init = {}) => {
     const url = new URL(typeof input === 'string' ? input : input.url, location.href);
@@ -35,7 +46,56 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
     const state = window.__trendTest;
     let result = [];
     let status = 200;
-    if (transactionsPage && path === '/transactions') {
+    if (paperPage && (path === '/holdings' || path === '/transactions' || path.startsWith('/agent/'))) {
+      window.__paperFixture.realReads.push(path);
+    }
+    if (paperPage && path === '/paper/portfolio') {
+      window.__paperFixture.reads.push(path);
+      result = window.__paperFixture.positions;
+    }
+    else if (paperPage && path === '/paper/refresh' && init.method === 'POST') {
+      window.__paperFixture.refreshes.push(path);
+      result = { updated: 1, failed: 0 };
+    }
+    else if (paperPage && /^\/paper\/assets\/\d+\/quotes$/.test(path)) {
+      window.__paperFixture.reads.push(path);
+      result = window.__paperFixture.quotes.filter(row => row.asset_id === Number(path.split('/')[3]));
+    }
+    else if (paperPage && /^\/paper\/assets\/\d+\/trades$/.test(path)) {
+      window.__paperFixture.reads.push(path);
+      const assetId = Number(path.split('/')[3]);
+      result = window.__paperFixture.trades.filter(row => row.asset_id === assetId);
+    }
+    else if (paperPage && path === '/paper/trades' && init.method === 'POST') {
+      const fixture = window.__paperFixture;
+      const payload = JSON.parse(init.body);
+      fixture.writes.push({ endpoint: path, method: 'POST', payload });
+      status = fixture.failWrite ? 503 : 201;
+      if (fixture.failWrite) result = { detail: '模拟环境保存失败' };
+      else result = { id: 99, asset_id: 41, operation: payload.operation, trade_date: payload.trade_date, amount: String(Number(payload.units) * Number(payload.price) + (payload.operation === 'sell' ? -1 : 1) * Number(payload.fee)), units: payload.units, price: payload.price, fee: payload.fee, reason: payload.reason, created_at: '2026-10-14T12:00:00', retracted_at: null, retraction_reason: null };
+    }
+    else if (paperPage && /\/paper\/trades\/\d+$/.test(path) && init.method === 'DELETE') {
+      const fixture = window.__paperFixture;
+      fixture.writes.push({ endpoint: path, method: 'DELETE' });
+      const trade = fixture.trades.find(row => path.endsWith('/' + row.id));
+      if (trade) {
+        trade.retracted_at = '2026-10-14T12:00:00';
+        trade.retraction_reason = '用户手动撤回';
+        const position = fixture.positions.find(row => row.id === trade.asset_id);
+        if (position && trade.operation === 'buy') {
+          position.units = '0';
+          position.cost_basis = '0';
+          position.market_price = null;
+          position.market_value = null;
+          position.unrealized_profit = null;
+          position.total_profit = position.realized_profit;
+          position.trade_count -= 1;
+          position.is_open = false;
+        }
+      }
+      result = { status: 'ok', id: trade?.id };
+    }
+    else if (transactionsPage && path === '/transactions') {
       if (init.method === 'POST') {
         status = state.failWrite ? 503 : 200;
         if (state.failWrite) result = { detail: '测试保存失败' };
@@ -111,18 +171,22 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       const call = pending.get(message.id);
       if (!call) return;
       pending.delete(message.id); clearTimeout(call.timer);
-      message.error ? call.reject(new Error(JSON.stringify(message.error))) : call.resolve(message.result);
+      message.error ? call.reject(new Error(call.method + ': ' + JSON.stringify(message.error))) : call.resolve(message.result);
     });
     const send = (method, params = {}) => new Promise((resolve, reject) => {
       const requestId = ++id;
       const timer = setTimeout(() => { pending.delete(requestId); reject(new Error(method + ' timeout')); }, 15000);
-      pending.set(requestId, { resolve, reject, timer });
+      pending.set(requestId, { method, resolve, reject, timer });
       ws.send(JSON.stringify({ id: requestId, method, params }));
     });
     const evaluate = async expression => {
-      const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-      if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
-      return result.result.value;
+      try {
+        const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+        if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+        return result.result.value;
+      } catch (error) {
+        throw new Error('Runtime expression failed: ' + expression + ' (' + error.message + ')');
+      }
     };
     const until = async expression => {
       for (let i = 0; i < 80; i++) {
@@ -143,12 +207,95 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
     const holdingsMode = process.argv.includes('--holdings');
     const transactionsMode = process.argv.includes('--transactions');
     const agentMode = process.argv.includes('--agent');
-    await send('Page.addScriptToEvaluateOnNewDocument', { source: '(' + installFixtures.toString() + ')(' + sidebarMode + ',' + frontierMode + ',' + holdingsMode + ',' + transactionsMode + ')' });
+    const paperMode = process.argv.includes('--paper');
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: '(' + installFixtures.toString() + ')(' + sidebarMode + ',' + frontierMode + ',' + holdingsMode + ',' + transactionsMode + ',' + paperMode + ')' });
     if (agentMode) await send('Page.addScriptToEvaluateOnNewDocument', { source: '(' + require('./check-agent.cjs').installAgentFixtures.toString() + ')()' });
     await send('Emulation.setDeviceMetricsOverride', { width: 1660, height: 1272, deviceScaleFactor: 1, mobile: false });
-    await send('Page.navigate', { url: (process.env.TEST_BASE_URL || 'http://127.0.0.1:5173') + (agentMode ? '/#agent' : transactionsMode ? '/#transactions' : holdingsMode ? '/#holdings' : frontierMode ? '/#frontierNews' : '/#charts') });
+    await send('Page.navigate', { url: (process.env.TEST_BASE_URL || 'http://127.0.0.1:5173') + (agentMode ? '/#agent' : paperMode ? '/#paper' : transactionsMode ? '/#transactions' : holdingsMode ? '/#holdings' : frontierMode ? '/#frontierNews' : '/#charts') });
     if (agentMode) {
       await require('./check-agent.cjs').checkAgent({ send, evaluate, until });
+      await send('Browser.close');
+      return;
+    }
+    if (paperMode) {
+      await until("document.querySelectorAll('.paperTable tbody tr').length===2");
+      const capture = async name => { if(process.env.TEST_SCREENSHOT_DIR){const result=await send('Page.captureScreenshot',{format:'png'});writeFileSync(join(process.env.TEST_SCREENSHOT_DIR,'paper-'+name+'.png'),Buffer.from(result.data,'base64'));} };
+      await new Promise(resolve=>setTimeout(resolve,350));
+      assert(await evaluate("document.querySelector('.paperCaution').textContent.includes('不改变真实持仓') && document.querySelector('.paperCaution').textContent.includes('Agent 分析')"),'paper ledger isolation is explicit');
+      assert.equal(await evaluate("document.querySelector('.paperMetrics').textContent.includes('2 个')"),true,'position totals render');
+      assert(await evaluate("[...document.querySelectorAll('.paperFormGrid input,.paperFormGrid select,.paperFormGrid textarea')].every(el=>el.labels.length>0)"),'paper form controls have visible labels');
+      assert.equal(await evaluate("document.querySelector('.searchTrigger')===null"),true,'real holding search is not exposed on paper page');
+      await evaluate("window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',ctrlKey:true,bubbles:true}))");
+      assert.equal(await evaluate("document.querySelector('.searchDialog')===null"),true,'real holding search shortcut is disabled on paper page');
+      assert.deepEqual(await evaluate('window.__paperFixture.realReads'),[],'paper page never reads real holdings, transactions or agent context');
+      assert.equal(await evaluate("document.querySelector('.paperTable tbody tr:first-child td:nth-child(6)').textContent.trim().startsWith('¥1,500.00')"),true,'market value displays from read-only quote fixture');
+      await capture('desktop');
+      const setField = async (selector,value) => evaluate(`(() => {const el=document.querySelector('${selector}');const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,'${value}');el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));})()`);
+      const paperToday = await evaluate("document.querySelector('[name=trade_date]').value");
+      await setField('[name=asset_code]','999002');
+      await setField('[name=asset_name]','测试虚拟标的');
+      await setField('[name=units]','1000000');
+      await setField('[name=price]','2.5');
+      await until("document.querySelector('.paperAmountPreview strong').textContent==='¥2,500,000.10'");
+      await evaluate("document.querySelector('.paperTradeForm').requestSubmit()");
+      await until("window.__paperFixture.writes.length===1 && !document.querySelector('.paperTradeForm button').disabled");
+      const firstTradeWrite = await evaluate('window.__paperFixture.writes[0]');
+      const { idempotency_key: buyRetryKey, ...firstTradePayload } = firstTradeWrite.payload;
+      assert.match(buyRetryKey,/^[0-9a-f-]{36}$/i,'new paper operation carries a retry key');
+      assert.deepEqual({ endpoint:firstTradeWrite.endpoint,method:firstTradeWrite.method,payload:firstTradePayload },{endpoint:'/paper/trades',method:'POST',payload:{asset_code:'999002',asset_name:'测试虚拟标的',asset_type:'fund',operation:'buy',trade_date:paperToday,units:'1000000',price:'2.5',fee:'0.1'}});
+      assert.equal(await evaluate("document.querySelector('[name=units]').value"),'','successful virtual trade resets form');
+      await evaluate("document.querySelector('.paperRefreshButton').click()");
+      await until("window.__paperFixture.refreshes.length===1 && !document.querySelector('.paperRefreshButton').disabled");
+      await evaluate("document.querySelector('.paperTable tbody tr:first-child .compactAction').click()");
+      await until("!!document.querySelector('.paperDetailDialog') && document.querySelectorAll('.paperHistoryTable tbody tr').length===1 && document.querySelectorAll('.paperQuotePoint').length===1");
+      assert(await evaluate("document.querySelector('.paperQuoteHistory').textContent.includes('1.5000')"),'quote refresh snapshot is visible in detail');
+      assert(await evaluate("document.querySelector('.paperHistoryTable').textContent.includes('浏览器测试：观察行业周期与估值')"),'virtual trade thesis is available in detail');
+      await capture('detail');
+      await evaluate("document.querySelector('.paperSellFromDetail').click()");
+      await until("!document.querySelector('.paperDetailDialog') && document.querySelector('[name=operation]').value==='sell'");
+      assert.equal(await evaluate("document.querySelector('[name=asset_code]').value"),'999001','sell action pre-fills paper asset');
+      assert.equal(await evaluate("document.querySelector('[name=price]').value"),'1.5000','sell action uses latest paper quote as an editable suggestion');
+      await setField('[name=units]','100');
+      await until("document.querySelector('.paperAmountPreview strong').textContent==='¥149.90'");
+      await evaluate("window.__paperFixture.failWrite=true;document.querySelector('.paperTradeForm').requestSubmit()");
+      await until("!!document.querySelector('[data-sonner-toast][data-type=error]')");
+      await until("!!document.querySelector('.paperTradeError') && document.activeElement.classList.contains('paperTradeError')");
+      assert.equal(await evaluate("document.querySelector('[name=units]').value"),'100','failed save retains simulated input');
+      await evaluate("window.__paperFixture.failWrite=false");
+      assert.equal(await evaluate("window.__paperFixture.writes[1].payload.operation"),'sell','sell operation is recorded independently');
+      await evaluate("document.querySelector('.paperTradeForm').requestSubmit()");
+      await until("window.__paperFixture.writes.length===3 && !document.querySelector('.paperTradeForm button').disabled");
+      assert.equal(await evaluate('window.__paperFixture.writes[2].payload.idempotency_key'),await evaluate('window.__paperFixture.writes[1].payload.idempotency_key'),'retry reuses the original operation key');
+      await evaluate("document.querySelector('.paperTable tbody tr:first-child .compactAction').click()");
+      await until("!!document.querySelector('.paperDetailDialog')");
+      await evaluate("document.querySelector('.paperDetailDialog .modalCloseButton').click()");
+      await evaluate("document.querySelector('[name=operation]').value='buy';document.querySelector('[name=operation]').dispatchEvent(new Event('change',{bubbles:true}))");
+      await evaluate("document.querySelector('[name=units]').value='';document.querySelector('[name=units]').dispatchEvent(new Event('input',{bubbles:true}))");
+      await evaluate("document.querySelector('.paperTable tbody tr:first-child .compactAction').click()");
+      await until("!!document.querySelector('.paperDetailDialog') && !!document.querySelector('.paperHistoryTable .retractButton')");
+      await evaluate("document.querySelector('.paperHistoryTable .retractButton').click()");
+      await until("!!document.querySelector('.confirmDialog')");
+      await evaluate("document.querySelector('.confirmDialog .secondaryButton').click()");
+      assert.equal(await evaluate('window.__paperFixture.writes.length'),3,'cancel retraction does not write');
+      await evaluate("document.querySelector('.paperHistoryTable .retractButton').click()");
+      await until("!!document.querySelector('.confirmDialog')");
+      await evaluate("document.querySelector('.confirmDialog .dangerButton').click()");
+      await until("window.__paperFixture.writes.length===4 && !document.querySelector('.confirmDialog')");
+      assert.equal(await evaluate("window.__paperFixture.writes[3].endpoint"),'/paper/trades/51');
+      await until("document.querySelector('.paperDetailMetrics').textContent.includes('0.00') && !document.querySelector('.paperSellFromDetail')");
+      assert(await evaluate("!!document.querySelector('.paperHistoryTable .paperRetractedLabel')"),'retracted history stays visible in the open detail');
+      await send('Emulation.setDeviceMetricsOverride',{width:390,height:1100,deviceScaleFactor:1,mobile:false});
+      assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'paper page fits narrow viewport');
+      await evaluate("document.querySelector('.paperLedger').scrollIntoView();document.querySelector('.paperTableWrap').scrollLeft=99999");
+      assert(await evaluate("document.querySelector('.paperTableWrap').scrollLeft>0"),'paper ledger scrolls horizontally on mobile');
+      await evaluate("document.querySelector('.paperTable tbody tr:first-child .compactAction').click()");
+      await until("!!document.querySelector('.paperDetailDialog')");
+      await new Promise(resolve=>setTimeout(resolve,200));
+      assert(await evaluate("(() => {const r=document.querySelector('.paperDetailDialog').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight})()"),'paper detail dialog fits mobile viewport');
+      await capture('mobile-detail');
+      assert(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'paper detail does not overflow page');
+      assert(await evaluate("window.__paperFixture.writes.every(write=>write.endpoint.startsWith('/paper/'))"),'all simulated writes use isolated paper endpoints');
+      console.log('PASS: paper isolation, unlimited amounts, buy/sell formulas, form errors, thesis details, retraction, mobile layout; writes isolated and mocked');
       await send('Browser.close');
       return;
     }
@@ -436,11 +583,15 @@ function installFixtures(longPage = false, newsPage = false, holdingsPage = fals
       assert(compact.scrolled > 0, 'short-window sidebar scrolls independently');
       assert(compact.top >= 0 && compact.bottom <= 500, 'exit remains reachable');
       assert(compact.navHeight >= 42, 'navigation does not shrink');
+      await send('Emulation.setDeviceMetricsOverride', { width: 800, height: 900, deviceScaleFactor: 1, mobile: false });
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('.nav')).gridTemplateColumns.split(' ').length"),8,'tablet navigation keeps all eight pages visible');
       await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
       await evaluate('window.scrollTo(0,0)');
       await new Promise(resolve => setTimeout(resolve, 150));
       const mobile = await evaluate(`({ position:getComputedStyle(document.querySelector('.sidebar')).position, width:document.documentElement.scrollWidth, viewport:innerWidth })`);
       assert.equal(mobile.position, 'relative', 'mobile keeps existing stacked navigation');
+      assert.equal(await evaluate("document.querySelectorAll('.navButton').length"),8,'mobile navigation keeps all eight pages visible');
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('.nav')).gridTemplateColumns.split(' ').length"),4,'mobile navigation uses compact icon grid');
       assert(mobile.width <= mobile.viewport, 'mobile has no horizontal overflow');
       await assertNoRefresh('scrolling and resizing never refresh quotes');
       console.log('PASS: fixed sidebar at top/middle/bottom; short-window controls and mobile layout');

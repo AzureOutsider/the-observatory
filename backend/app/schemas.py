@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -78,6 +79,69 @@ class TransactionRead(BaseModel):
     retracted_at: Optional[datetime] = None
     retraction_reason: Optional[str] = None
     retraction_effect: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PaperTradeCreate(BaseModel):
+    idempotency_key: Optional[UUID] = None
+    asset_code: str = Field(min_length=1, max_length=32)
+    asset_name: str = Field(min_length=1, max_length=255)
+    asset_type: Literal["fund", "stock"]
+    operation: Literal["buy", "sell"]
+    trade_date: date
+    units: Decimal = Field(gt=0, decimal_places=2)
+    price: Decimal = Field(gt=0, decimal_places=6)
+    fee: Decimal = Field(default=Decimal("0.1"), ge=0, decimal_places=4)
+    reason: Optional[str] = Field(default=None, max_length=2000)
+
+
+class PaperTradeRead(BaseModel):
+    id: int
+    asset_id: int
+    operation: str
+    trade_date: date
+    amount: Decimal
+    units: Decimal
+    price: Decimal
+    fee: Decimal
+    reason: Optional[str] = None
+    created_at: datetime
+    retracted_at: Optional[datetime] = None
+    retraction_reason: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PaperPortfolioPosition(BaseModel):
+    id: int
+    code: str
+    name: str
+    asset_type: str
+    units: Decimal
+    cost_basis: Decimal
+    realized_profit: Decimal
+    market_price: Optional[Decimal] = None
+    market_value: Optional[Decimal] = None
+    unrealized_profit: Optional[Decimal] = None
+    total_profit: Optional[Decimal] = None
+    quote_status: str
+    quote_message: Optional[str] = None
+    quote_source: Optional[str] = None
+    quote_time: Optional[str] = None
+    trade_count: int
+    is_open: bool
+
+
+class PaperQuoteRead(BaseModel):
+    id: int
+    captured_at: datetime
+    price: Decimal
+    change_pct: Optional[Decimal] = None
+    quote_status: str
+    quote_time: Optional[str] = None
+    source: Optional[str] = None
+    message: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

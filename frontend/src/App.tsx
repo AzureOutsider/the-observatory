@@ -3,6 +3,7 @@ import {
   Bot,
   CircleDot,
   Home,
+  FlaskConical,
   Newspaper,
   Power,
   Repeat2,
@@ -28,14 +29,16 @@ const Charts = lazy(() => import("./pages/Charts").then((module) => ({ default: 
 const News = lazy(() => import("./pages/News").then((module) => ({ default: module.News })));
 const FrontierNews = lazy(() => import("./pages/FrontierNews").then((module) => ({ default: module.FrontierNews })));
 const Agent = lazy(() => import("./pages/Agent").then((module) => ({ default: module.Agent })));
+const PaperTrading = lazy(() => import("./pages/PaperTrading").then((module) => ({ default: module.PaperTrading })));
 const TrackingDetail = lazy(() => import("./pages/TrackingDetail").then((module) => ({ default: module.TrackingDetail })));
 
-type PageKey = "dashboard" | "holdings" | "transactions" | "charts" | "signals" | "frontierNews" | "agent" | "trackingDetail";
+type PageKey = "dashboard" | "holdings" | "transactions" | "paper" | "charts" | "signals" | "frontierNews" | "agent" | "trackingDetail";
 
 const navItems: Array<{ key: PageKey; label: string; icon: ComponentType<{ size?: number }> }> = [
   { key: "dashboard", label: "总览", icon: Home },
   { key: "holdings", label: "持仓", icon: WalletCards },
   { key: "transactions", label: "操作", icon: Repeat2 },
+  { key: "paper", label: "模拟盘", icon: FlaskConical },
   { key: "charts", label: "走势", icon: BarChart3 },
   { key: "signals", label: "信号", icon: Newspaper },
   { key: "frontierNews", label: "前沿新闻", icon: Rss },
@@ -48,7 +51,7 @@ export function App() {
   const [confirmShutdown, setConfirmShutdown] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const systemStatusQuery = useSystemStatus();
-  const holdingsQuery = useHoldings();
+  const holdingsQuery = useHoldings(page !== "paper");
   const systemStatus = systemStatusQuery.data ?? null;
   const apiState: "checking" | "online" | "offline" = systemStatusQuery.isPending
     ? "checking"
@@ -73,6 +76,7 @@ export function App() {
       const editing = target?.matches("input, textarea, select, [contenteditable='true']");
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        if (page === "paper") return;
         setSearchOpen(true);
         return;
       }
@@ -85,6 +89,7 @@ export function App() {
   });
 
   const navigate = useCallback((nextPage: PageKey) => {
+    if (nextPage === "paper") setSearchOpen(false);
     window.location.hash = nextPage;
     setPage(nextPage);
   }, []);
@@ -184,7 +189,7 @@ export function App() {
               <span>LOCAL API</span>
               <strong>{apiState === "online" ? "在线" : apiState === "offline" ? "离线" : "检测中"}</strong>
             </div>
-            <button className="searchTrigger" type="button" onClick={() => setSearchOpen(true)} title="搜索持仓（Ctrl/Cmd + K）"><Search size={15} /><span>搜索</span><kbd>⌘K</kbd></button>
+            {page !== "paper" && <button className="searchTrigger" type="button" onClick={() => setSearchOpen(true)} title="搜索持仓（Ctrl/Cmd + K）"><Search size={15} /><span>搜索</span><kbd>⌘K</kbd></button>}
             <div className="contextDate">
               <strong>{new Date().toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace("/", ".")}</strong>
               <span>丙午年 · 八月廿八</span>
@@ -198,6 +203,7 @@ export function App() {
             {page === "dashboard" && <Dashboard />}
             {page === "holdings" && <Holdings />}
             {page === "transactions" && <Transactions />}
+            {page === "paper" && <PaperTrading />}
             {(page === "charts" || page === "trackingDetail") && <Charts />}
             {page === "trackingDetail" && <TrackingDetail />}
             {page === "signals" && <News />}
@@ -207,7 +213,7 @@ export function App() {
         </AppErrorBoundary>
       </main>
       <ConfirmDialog open={confirmShutdown} title="退出观象" description="前端、后端和启动器都会停止，确定继续吗？" confirmLabel="退出观象" danger busy={shutdownState === "stopping"} onCancel={() => setConfirmShutdown(false)} onConfirm={async () => { await shutdown(); if (shutdownState !== "stopping") setConfirmShutdown(false); }} />
-      <SearchDialog open={searchOpen} holdings={holdingsQuery.data ?? []} onClose={closeSearch} onSelectHolding={selectHolding} />
+      {page !== "paper" && <SearchDialog open={searchOpen} holdings={holdingsQuery.data ?? []} onClose={closeSearch} onSelectHolding={selectHolding} />}
     </div>
   );
 }
