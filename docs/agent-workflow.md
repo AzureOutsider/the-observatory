@@ -20,6 +20,34 @@ GET http://127.0.0.1:8000/api/agent/analysis-package/today
 
 旧的 `GET /api/agent/research-context/today` 保留用于兼容。
 
+### 1.1 模拟盘独立 Agent 接口
+
+模拟盘不会进入上面的真实盘分析包。需要让 Agent 单独追踪虚拟投资想法时，读取：
+
+```text
+GET http://127.0.0.1:8000/api/agent/paper-context/today
+```
+
+返回的 `scope` 固定为 `paper_portfolio_only`，`real_portfolio_included` 固定为 `false`，包含：
+
+- `summary`：模拟标的数量、当前模拟持仓数量、成本、已实现/浮动/总盈亏和未估值数量。
+- `positions`：每个模拟标的的当前份额、成本、行情估值、盈亏、全部模拟流水和行情快照。
+- `operations`：按日期倒序排列的全部模拟操作；撤回记录仍保留，并带有 `retracted_at` 与 `retraction_reason`，但不参与当前持仓计算。
+- `agent_notes`：模拟金额计算和行情快照的解释，提醒 Agent 不要把模拟结果写成真实交易事实。
+
+`date` 表示生成日期，接口包含全部历史，不会只筛选今日操作。金额、价格和份额以十进制字符串返回。`operations.cash_flow` 中买入为负数，卖出为正数；已撤回记录需要排除后才能汇总。只要仍有未估值的模拟持仓，组合市值、浮动盈亏和总盈亏为 `null`，不能视为零；已实现盈亏仍可读取。
+
+可以把接口结果保存为单独的本地 JSON 文件，再让专用 Agent 读取。`agent_data/*.json` 已被 Git 忽略，示例：
+
+```powershell
+$paper = Invoke-RestMethod http://127.0.0.1:8000/api/agent/paper-context/today
+$paper | ConvertTo-Json -Depth 30 | Set-Content .\agent_data\paper_context.json -Encoding utf8
+```
+
+建议把模拟盘事实 JSON 和真实盘复盘文件分开保存；模拟盘复盘 Markdown 可以放在项目外，不要与真实盘的 `FINANCE_REVIEW_PATH` 共用。该接口只读数据库，不会自动刷新行情，也不会修改任何复盘文件。
+
+可将 [模拟盘追踪 Agent 工作说明](paper-portfolio-agent.md) 作为独立 Agent 的提示词，并把其追踪 Markdown 保存在单独文件中。
+
 新闻接口默认使用本地 SQLite 缓存，只有用户或调用方显式传 `refresh=true` 才请求上游。当前适配器包括新浪财经、华尔街见闻和美联储公开 Press Releases RSS，每条新闻包含来源、发布时间、抓取时间、重要度、摘要（若来源提供）和质量状态；外部 Agent 仍必须主动检索完整新闻。
 
 ## 2. 外部研究与写作

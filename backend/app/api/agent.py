@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.schemas import AgentNoteCreate, ReviewAppendRequest
+from app.schemas import AgentNoteCreate, PaperAgentContext, ReviewAppendRequest
 from app.services.agent_context import (
     append_review_markdown,
     build_asset_context,
@@ -10,6 +10,7 @@ from app.services.agent_context import (
     build_today_context,
     save_agent_note,
 )
+from app.services.paper_agent_context import build_paper_agent_context
 
 router = APIRouter(tags=["agent"])
 
@@ -28,6 +29,12 @@ def today_research_context(topic: str | None = None, session: Session = Depends(
 def today_analysis_package(topic: str | None = None, session: Session = Depends(get_session)):
     """Stable package endpoint for external Skills and agents."""
     return build_research_context(session, topic=topic)
+
+
+@router.get("/agent/paper-context/today", response_model=PaperAgentContext)
+def today_paper_context(session: Session = Depends(get_session)):
+    """Stable package endpoint for an Agent tracking the isolated paper portfolio."""
+    return build_paper_agent_context(session)
 
 
 @router.post("/agent/reviews/append")

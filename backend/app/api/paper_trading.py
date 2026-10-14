@@ -3,46 +3,26 @@ from decimal import Decimal, ROUND_HALF_UP
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.db import get_session
 from app.models import PaperAsset, PaperPriceSnapshot, PaperTrade
-from app.schemas import PaperPortfolioPosition, PaperQuoteRead, PaperTradeCreate, PaperTradeRead
+from app.schemas import (
+    PaperPortfolioPosition,
+    PaperQuoteRead,
+    PaperTradeCreate,
+    PaperTradeRead,
+)
 from app.services.market import fetch_fund_estimate, fetch_stock_quote
+from app.services.paper_portfolio import (
+    SIX_PLACES,
+    get_paper_portfolio,
+    money as _money,
+    replay_paper_trades as _replay,
+)
 
 router = APIRouter(tags=["paper trading"])
-FOUR_PLACES = Decimal("0.0001")
-SIX_PLACES = Decimal("0.000001")
-
-
-def _money(value: Decimal) -> Decimal:
-    return Decimal(value).quantize(FOUR_PLACES, rounding=ROUND_HALF_UP)
-
-
-def _replay(trades: list[PaperTrade], *, ignored_trade_id: int | None = None) -> tuple[Decimal, Decimal, Decimal]:
-    units = Decimal("0")
-    cost_basis = Decimal("0")
-    realized_profit = Decimal("0")
-    active = sorted(
-        (row for row in trades if row.retracted_at is None and row.id != ignored_trade_id),
-        key=lambda row: (row.trade_date, row.id),
-    )
-    for trade in active:
-        shares = Decimal(trade.units)
-        amount = Decimal(trade.amount)
-        if trade.operation == "buy":
-            units += shares
-            cost_basis = _money(cost_basis + amount)
-            continue
-        if shares > units:
-            raise ValueError("模拟卖出份额超过此前日期的模拟持仓；请检查交易日期或先补录买入")
-        removed_cost = _money(cost_basis * shares / units) if units else Decimal("0")
-        realized_profit = _money(realized_profit + amount - removed_cost)
-        units -= shares
-        cost_basis = _money(max(Decimal("0"), cost_basis - removed_cost))
-    return units, cost_basis, realized_profit
 
 
 def _trade_amount(payload: PaperTradeCreate) -> Decimal:
@@ -94,55 +74,7 @@ def _quote_price(asset_type: str, quote: dict) -> Decimal | None:
 
 @router.get("/paper/portfolio", response_model=list[PaperPortfolioPosition])
 def paper_portfolio(session: Session = Depends(get_session)):
-    assets = session.query(PaperAsset).options(selectinload(PaperAsset.trades)).order_by(PaperAsset.id.desc()).all()
-    latest_quotes: dict[int, PaperPriceSnapshot] = {}
-    latest_ids = (
-        session.query(PaperPriceSnapshot.asset_id, func.max(PaperPriceSnapshot.id).label("snapshot_id"))
-        .group_by(PaperPriceSnapshot.asset_id)
-        .subquery()
-    )
-    snapshots = session.query(PaperPriceSnapshot).join(latest_ids, PaperPriceSnapshot.id == latest_ids.c.snapshot_id).all()
-    latest_quotes = {snapshot.asset_id: snapshot for snapshot in snapshots}
-    positions: list[PaperPortfolioPosition] = []
-    for asset in assets:
-        trades = [row for row in asset.trades if row.retracted_at is None]
-        units, cost_basis, realized_profit = _replay(trades)
-        market_price = market_value = unrealized_profit = total_profit = None
-        quote_status = "closed" if units == 0 else "unavailable"
-        quote_message = quote_source = quote_time = None
-        snapshot = latest_quotes.get(asset.id) if units > 0 else None
-        if snapshot is not None:
-            market_price = Decimal(snapshot.price)
-            market_value = _money(units * market_price)
-            unrealized_profit = _money(market_value - cost_basis)
-            total_profit = _money(realized_profit + unrealized_profit)
-            quote_status = snapshot.quote_status
-            quote_message = snapshot.message
-            quote_source = snapshot.source
-            quote_time = snapshot.quote_time
-        elif units > 0:
-            quote_status = "not_loaded"
-            quote_message = "尚无模拟行情快照，请手动刷新行情"
-        positions.append(PaperPortfolioPosition(
-            id=asset.id,
-            code=asset.code,
-            name=asset.name,
-            asset_type=asset.asset_type,
-            units=units.quantize(SIX_PLACES),
-            cost_basis=cost_basis,
-            realized_profit=realized_profit,
-            market_price=market_price,
-            market_value=market_value,
-            unrealized_profit=unrealized_profit,
-            total_profit=total_profit,
-            quote_status=quote_status,
-            quote_message=quote_message,
-            quote_source=quote_source,
-            quote_time=quote_time,
-            trade_count=len(trades),
-            is_open=units > 0,
-        ))
-    return positions
+    return get_paper_portfolio(session)
 
 
 @router.post("/paper/refresh")

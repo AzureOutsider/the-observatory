@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -74,6 +74,121 @@ def test_paper_buys_are_isolated_from_real_assets_holdings_and_transactions(sess
     assert session.query(Asset).count() == 1
     assert session.query(PriceSnapshot).count() == 0
     assert real_holding.units == Decimal("100")
+
+
+def test_agent_paper_context_exposes_only_paper_ledger_with_full_history(session):
+    real_asset = Asset(code="999201", name="Real test asset", asset_type="fund")
+    session.add(Holding(asset=real_asset, amount=Decimal("123.45"), units=Decimal("50"), cost_basis=Decimal("100")))
+    paper_asset = PaperAsset(code="999201", name="Paper test idea", asset_type="fund")
+    active_buy = PaperTrade(
+        asset=paper_asset, operation="buy", trade_date=date(2026, 10, 13),
+        amount=Decimal("20.1000"), units=Decimal("10"), price=Decimal("2"), fee=Decimal("0.1"),
+        reason="Track a hypothetical sector thesis",
+    )
+    retracted_sell = PaperTrade(
+        asset=paper_asset, operation="sell", trade_date=date(2026, 10, 14),
+        amount=Decimal("5.9000"), units=Decimal("2"), price=Decimal("3"), fee=Decimal("0.1"),
+        retracted_at=datetime(2026, 10, 14, 12, 0), retraction_reason="test retraction",
+    )
+    session.add_all([active_buy, retracted_sell])
+    session.flush()
+    session.add(PaperPriceSnapshot(
+        asset_id=paper_asset.id, captured_at=datetime(2026, 10, 14, 15, 0), price=Decimal("2.5"),
+        change_pct=Decimal("1.2"), quote_status="intraday_estimate", quote_time="15:00",
+        source="test quote source", message="test snapshot",
+    ))
+    session.commit()
+
+    response = make_client(session).get("/api/agent/paper-context/today")
+
+    assert response.status_code == 200
+    package = response.json()
+    assert package["scope"] == "paper_portfolio_only"
+    assert package["real_portfolio_included"] is False
+    assert "private_portfolio" not in package
+    assert package["summary"]["asset_count"] == 1
+    assert package["summary"]["open_position_count"] == 1
+    assert package["summary"]["operation_count"] == 2
+    assert package["summary"]["active_operation_count"] == 1
+    assert Decimal(package["summary"]["total_cost_basis"]) == Decimal("20.1000")
+    assert Decimal(package["summary"]["total_market_value"]) == Decimal("25.0000")
+    assert package["positions"][0]["name"] == "Paper test idea"
+    assert len(package["positions"][0]["trades"]) == 2
+    assert len(package["positions"][0]["quotes"]) == 1
+    assert Decimal(package["operations"][0]["cash_flow"]) == Decimal("5.9000")
+    assert package["operations"][0]["retracted_at"] is not None
+    assert Decimal(package["operations"][1]["cash_flow"]) == Decimal("-20.1000")
+    assert "Real test asset" not in str(package)
+    assert "123.45" not in str(package)
+    assert "Track a hypothetical sector thesis" in str(package)
+
+
+def test_agent_paper_context_does_not_treat_unpriced_positions_as_zero_value(session):
+    asset = PaperAsset(code="999202", name="Unpriced test idea", asset_type="stock")
+    session.add(PaperTrade(
+        asset=asset, operation="buy", trade_date=date(2026, 10, 14),
+        amount=Decimal("10.1"), units=Decimal("10"), price=Decimal("1"), fee=Decimal("0.1"),
+    ))
+    session.commit()
+
+    package = make_client(session).get("/api/agent/paper-context/today").json()
+
+    assert package["summary"]["unpriced_open_position_count"] == 1
+    assert package["summary"]["total_market_value"] is None
+    assert package["summary"]["total_unrealized_profit"] is None
+    assert package["summary"]["total_profit"] is None
+
+
+def test_latest_paper_valuation_uses_capture_time_not_insert_id(session):
+    asset = PaperAsset(code="999204", name="Out of order quote test", asset_type="stock")
+    session.add(asset)
+    session.flush()
+    session.add_all([
+        PaperTrade(
+            asset_id=asset.id, operation="buy", trade_date=date(2026, 10, 14),
+            amount=Decimal("10.1"), units=Decimal("10"), price=Decimal("1"), fee=Decimal("0.1"),
+        ),
+        PaperPriceSnapshot(
+            asset_id=asset.id, captured_at=datetime(2026, 10, 14, 15, 0), price=Decimal("2"),
+            quote_status="intraday_estimate", quote_time="15:00", source="newer capture",
+        ),
+    ])
+    session.commit()
+    session.add(PaperPriceSnapshot(
+        asset_id=asset.id, captured_at=datetime(2026, 10, 14, 14, 0), price=Decimal("1"),
+        quote_status="intraday_estimate", quote_time="14:00", source="later insert but older capture",
+    ))
+    session.commit()
+
+    position = make_client(session).get("/api/paper/portfolio").json()[0]
+    context = make_client(session).get("/api/agent/paper-context/today").json()
+
+    assert Decimal(position["market_price"]) == Decimal("2")
+    assert Decimal(context["positions"][0]["market_price"]) == Decimal("2")
+    assert context["positions"][0]["quotes"][-1]["source"] == "newer capture"
+
+
+def test_agent_paper_context_reports_closed_idea_total_profit_from_realized_profit(session):
+    asset = PaperAsset(code="999203", name="Closed test idea", asset_type="stock")
+    session.add_all([
+        PaperTrade(
+            asset=asset, operation="buy", trade_date=date(2026, 10, 13),
+            amount=Decimal("10.1000"), units=Decimal("10"), price=Decimal("1"), fee=Decimal("0.1"),
+        ),
+        PaperTrade(
+            asset=asset, operation="sell", trade_date=date(2026, 10, 14),
+            amount=Decimal("14.9000"), units=Decimal("10"), price=Decimal("1.5"), fee=Decimal("0.1"),
+        ),
+    ])
+    session.commit()
+
+    package = make_client(session).get("/api/agent/paper-context/today").json()
+    position = package["positions"][0]
+
+    assert position["is_open"] is False
+    assert Decimal(position["unrealized_profit"]) == Decimal("0")
+    assert Decimal(position["total_profit"]) == Decimal(position["realized_profit"]) == Decimal("4.8000")
+    assert Decimal(package["summary"]["total_profit"]) == Decimal("4.8000")
 
 
 def test_paper_buy_sell_uses_average_cost_and_tracks_realized_profit(session, monkeypatch):

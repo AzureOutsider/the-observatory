@@ -146,6 +146,55 @@ class PaperQuoteRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaperAgentOperation(BaseModel):
+    id: int
+    asset_id: int
+    asset_code: str
+    asset_name: str
+    asset_type: str
+    operation: Literal["buy", "sell"]
+    trade_date: date
+    amount: Decimal
+    cash_flow: Decimal
+    units: Decimal
+    price: Decimal
+    fee: Decimal
+    reason: Optional[str] = None
+    created_at: datetime
+    retracted_at: Optional[datetime] = None
+    retraction_reason: Optional[str] = None
+
+
+class PaperAgentPosition(PaperPortfolioPosition):
+    trades: list[PaperTradeRead]
+    quotes: list[PaperQuoteRead]
+
+
+class PaperAgentSummary(BaseModel):
+    asset_count: int
+    open_position_count: int
+    operation_count: int
+    active_operation_count: int
+    total_cost_basis: Decimal
+    total_market_value: Optional[Decimal] = None
+    total_realized_profit: Decimal
+    total_unrealized_profit: Optional[Decimal] = None
+    total_profit: Optional[Decimal] = None
+    unpriced_open_position_count: int
+
+
+class PaperAgentContext(BaseModel):
+    schema_version: str
+    generated_at: datetime
+    date: date
+    scope: Literal["paper_portfolio_only"]
+    real_portfolio_included: Literal[False]
+    agent_notes: list[str]
+    summary: PaperAgentSummary
+    positions: list[PaperAgentPosition]
+    operations: list[PaperAgentOperation]
+
+
 class ImportHoldingsRequest(BaseModel):
     path: str
 
